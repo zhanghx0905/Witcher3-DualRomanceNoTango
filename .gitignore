@@ -1,0 +1,22 @@
+# Local builds and game-derived working files
+/build/
+/dist/
+/local/
+/depot/
+/workspace/
+/packed/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.sav
+*.w3speech
+*.log
+*.tmp
+# The two versioned release/payload files are intentional release artifacts.

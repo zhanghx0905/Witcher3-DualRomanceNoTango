@@ -1,0 +1,70 @@
+{
+  "native_chair_origin": [
+    -382.99310302734375,
+    -775.383544921875,
+    35.19615173339844
+  ],
+  "selected": {
+    "delta": [
+      -4.0,
+      1.0,
+      -0.017419446013150264
+    ],
+    "spread": 0.0653115961515951,
+    "foliage_clearance": 1.6409631019805986,
+    "nearby": [
+      [
+        1.6409631019805986,
+        "blue_geranium.srt",
+        [
+          -385.54290771484375,
+          -771.4370727539062,
+          35.113101959228516
+        ]
+      ],
+      [
+        1.8649853178900146,
+        "rhododendron_low_white.srt",
+        [
+          -383.382080078125,
+          -778.1702880859375,
+          35.132049560546875
+        ]
+      ],
+      [
+        1.8713391643464774,
+        "white_chamomilla.srt",
+        [
+          -385.4104309082031,
+          -771.2435913085938,
+          35.13420486450195
+        ]
+      ],
+      [
+        1.876388560664015,
+        "blue_geranium.srt",
+        [
+          -390.24188232421875,
+          -772.17333984375,
+          36.02314758300781
+        ]
+      ],
+      [
+        1.9328601976187139,
+        "blue_geranium.srt",
+        [
+          -389.5837097167969,
+          -771.48486328125,
+          36.0351676940918
+        ]
+      ]
+    ],
+    "distance": 4.123105625617661
+  },
+  "plant_instances_examined": 334,
+  "foliage_method": "Distance from oriented 2.30 x 1.10 m chair rectangle; exclusion radius 2.2 m shrubs and .8 m flower clusters; low green grass ignored.",
+  "collision_validated": false,
+  "navigation_validated": false,
+  "runtime_validated": false,
+  "layer_streaming": "Native CLayerInfo 6696 has no bounding-box property; quest loads the layer explicitly. New furniture uses independent entity streaming, not the original sector block."
+}

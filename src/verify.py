@@ -1,0 +1,496 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 Hexiao Zhang
+"""Structural/integration checks. These do not replace in-game playtesting."""
+import argparse
+import hashlib
+import json
+import math
+from pathlib import Path
+import struct
+import tempfile
+import unittest
+
+from build import (BOARDS, BOB_FIX, HOUSE, LODGE, PATHS, Q310, Q504, TRISS_HOME,
+                   TRISS_MAIN, build, integer)
+from redio import (BundleCatalog, Metadata, Resource, fnv32_name, read_properties,
+                   read_ws_string, read_vlq)
+from manor_layout import (AP_LAYER, ANCHOR_LAYER, TRIGGER_LAYER, DECO_LAYER, BED_TEMPLATE,
+                          OFFSET, TRISS_PATH, TRISS_TRIGGER, fields, field,
+                          inline_array, path_world_points, sector_objects)
+
+
+def fact_condition(r, obj, facts):
+    props = {r.names[p.name]: p for p in r.props(obj)}
+    key = read_ws_string(props['factId'].data)
+    value = facts.get(key, 0)
+    expected = int.from_bytes(props['value'].data, 'little', signed=True) if 'value' in props else 0
+    compare = r.names[int.from_bytes(props['compareFunc'].data, 'little')] if 'compareFunc' in props else 'CF_Equal'
+    if 'queryFact' in props and r.names[int.from_bytes(props['queryFact'].data, 'little')] == 'QF_DoesExist':
+        value = int(key in facts)
+    operations = {'CF_Equal': lambda: value == expected, 'CF_NotEqual': lambda: value != expected,
+                  'CF_Greater': lambda: value > expected, 'CF_GreaterEqual': lambda: value >= expected,
+                  'CF_Less': lambda: value < expected, 'CF_LessEqual': lambda: value <= expected}
+    return operations[compare]()
+
+
+def walk_quest(r, start, facts, stop):
+    queue, visited, steps = [start], [], 0
+    while queue:
+        obj = queue.pop(0)
+        visited.append(obj)
+        steps += 1
+        assert steps < 100, 'Unexpected quest loop'
+        if obj in stop:
+            continue
+        connections = r.connections(obj)
+        if r.kind(obj) == 'CQuestConditionBlock':
+            decision = fact_condition(r, integer(r, obj, 'questCondition'), facts)
+            connections = [(s, t) for s, t in connections if s == ('True' if decision else 'False')]
+        assert len(connections) <= 1, (obj, connections)
+        if connections:
+            queue.extend(target for target, _ in connections[0][1])
+    return visited
+
+
+def boards(r, facts):
+    obj, videos, visited = 11, [], set()
+    while obj != 7:
+        assert obj not in visited, 'Ending scene loop'
+        visited.add(obj)
+        kind = r.kind(obj)
+        if kind == 'CStorySceneFlowCondition':
+            decision = fact_condition(r, integer(r, obj, 'questCondition'), facts)
+            obj = integer(r, obj, 'trueLink' if decision else 'falseLink')
+        else:
+            if kind == 'CStorySceneVideoSection':
+                videos.append(read_ws_string(r.prop(obj, 'videoFileName').data))
+            obj = integer(r, obj, 'nextLinkElement')
+    return videos
+
+
+def romance(triss, yen):
+    return {key: 1 for key, enabled in [('q309_triss_lover', triss), ('q309_triss_stayed', triss),
+                                       ('sq202_yen_girlfriend', yen)] if enabled}
+
+
+class ModChecks(unittest.TestCase):
+    resources = {}
+    originals = {}
+    output = None
+
+    def resource(self, name):
+        return Resource(self.resources[name])
+
+    def test_all_inputs_roundtrip_without_changes(self):
+        for name, raw in self.originals.items():
+            with self.subTest(path=name):
+                self.assertEqual(Resource(raw).build(), raw)
+
+    def test_all_outputs_have_valid_crcs_and_names(self):
+        for name, raw in self.resources.items():
+            with self.subTest(path=name):
+                r = Resource(raw)
+                self.assertEqual(r.build(), raw)
+                for i, text in enumerate(r.names):
+                    stored = struct.unpack_from('<I', r.table_data[1], i * 8 + 4)[0]
+                    self.assertEqual(fnv32_name(text), stored)
+
+    def test_package_metadata_matches_bundle_and_native_layout(self):
+        directory = self.output / 'Mods/modDualRomanceNoTango/content'
+        catalog = BundleCatalog(directory)
+        metadata = Metadata((directory / 'metadata.store').read_bytes())
+        self.assertEqual(set(catalog.items), set(PATHS))
+        self.assertEqual(set(metadata.by_path) - {''}, set(PATHS))
+        hashes = [struct.unpack_from('<Q', row)[0] for row in metadata.sections[6]]
+        self.assertEqual(hashes, sorted(hashes))
+        for name in PATHS:
+            with self.subTest(path=name):
+                fi = struct.unpack('<8I', metadata.sections[0][metadata.by_path[name]])
+                _, _, offset, unpacked, packed, _, comp = catalog.items[name]
+                self.assertEqual(fi[2:4], (packed, unpacked))
+                self.assertEqual(fi[5:8], (0, 0, comp))
+                entry = struct.unpack('<Q4I', metadata.sections[1][fi[4]])
+                self.assertEqual(entry, (offset, packed, 0, metadata.by_path[name], 1))
+                self.assertEqual(catalog.extract(name), self.resources[name])
+
+    def test_native_metadata_compression_layout_is_confirmed(self):
+        m = Metadata((self.game / 'content/metadata.store').read_bytes())
+        c = BundleCatalog(self.game / 'content/content0/bundles')
+        for name in PATHS:
+            fi = struct.unpack('<8I', m.sections[0][m.by_path[name]])
+            self.assertEqual(fi[7], c.items[name][-1])
+            self.assertEqual(fi[6], 0)
+
+    def test_new_quest_nodes_are_registered_and_guid_distinct(self):
+        for name in (Q310, HOUSE, Q504, BOB_FIX):
+            r = self.resource(name)
+            old_count = len(Resource(self.originals[name]).chunks)
+            original_guids = set()
+            added_guids = set()
+            for obj, chunk in enumerate(r.chunks, 1):
+                for p in r.props(obj):
+                    if r.names[p.name] == 'guid':
+                        if obj <= old_count:
+                            original_guids.add(p.data)
+                        else:
+                            self.assertNotIn(p.data, original_guids | added_guids)
+                            added_guids.add(p.data)
+                if obj > old_count and r.kind(chunk.parent) == 'CQuestGraph':
+                    raw = r.prop(chunk.parent, 'graphBlocks').data
+                    self.assertIn(obj, struct.unpack_from('<' + 'I' * struct.unpack_from('<I', raw)[0], raw, 4))
+                if any(r.names[p.name] == 'cachedConnections' for p in r.props(obj)):
+                    for _, targets in r.connections(obj):
+                        for target, _ in targets:
+                            self.assertGreater(target, 0)
+                            self.assertLessEqual(target, len(r.chunks))
+
+    def test_quest_connections_keep_unmodified_bytes(self):
+        # Re-encoding representative native connection records must match
+        # byte-for-byte before relying on this codec to build new fan-outs.
+        for name, ids in [(Q310, [192, 238]), (HOUSE, [125, 157, 244])]:
+            r = Resource(self.originals[name])
+            for obj in ids:
+                original = r.prop(obj, 'cachedConnections').data
+                r.set_connections(obj, r.connections(obj))
+                self.assertEqual(original, r.prop(obj, 'cachedConnections').data)
+
+    def test_tango_setup_and_door_lock_unreachable(self):
+        r = self.resource(Q310)
+        for triss in (False, True):
+            for yen in (False, True):
+                with self.subTest(triss=triss, yen=yen):
+                    facts = romance(triss, yen)
+                    for completed in (False, True):
+                        state = dict(facts)
+                        if completed:
+                            state['q311_completed'] = 1
+                        path = walk_quest(r, 191, state, {69})
+                        self.assertIn(69, path)
+                        self.assertNotIn(189, path)
+                        self.assertNotIn(109, path)
+                    path = walk_quest(r, 237, facts, {227})
+                    self.assertIn(227, path)
+                    self.assertNotIn(239, path)
+
+    def test_both_lodge_invitations_bypassed(self):
+        r = self.resource(LODGE)
+        original = Resource(self.originals[LODGE])
+        for obj in (9, 684):
+            true_link = integer(r, obj, 'trueLink')
+            false_link = integer(r, obj, 'falseLink')
+            self.assertEqual(integer(r, true_link, 'nextLinkElement'), integer(r, false_link, 'nextLinkElement'))
+            self.assertNotEqual(integer(original, true_link, 'nextLinkElement'), integer(r, true_link, 'nextLinkElement'))
+
+    def test_all_four_ending_board_outcomes(self):
+        r = self.resource(BOARDS)
+        expected = {(False, False): ['fb_5c.usm'], (True, False): ['fb_5b.usm'],
+                    (False, True): ['fb_5a.usm'], (True, True): ['fb_5a.usm', 'fb_5b.usm']}
+        for choices, result in expected.items():
+            with self.subTest(choices=choices):
+                self.assertEqual([v.split('\\')[-1] for v in boards(r, romance(*choices))], result)
+
+    def test_scene_forward_reverse_links_agree(self):
+        for name in (LODGE, BOARDS):
+            r = self.resource(name)
+            old = Resource(self.originals[name])
+            for obj, chunk in enumerate(r.chunks, 1):
+                if obj <= len(old.chunks) and old.chunk(obj).data == chunk.data:
+                    continue
+                props = {r.names[p.name]: p for p in r.props(obj)}
+                if 'nextLinkElement' not in props:
+                    continue
+                target = integer(r, obj, 'nextLinkElement')
+                incoming = r.prop(target, 'linkedElements').data
+                count = struct.unpack_from('<I', incoming)[0]
+                self.assertIn(obj, struct.unpack_from('<' + 'I' * count, incoming, 4))
+
+    def test_manor_intros_serial_and_quest_completes_once(self):
+        r = self.resource(HOUSE)
+        for triss, yen, expected in [(False, True, [244]), (True, False, [252]), (True, True, [244, 252])]:
+            with self.subTest(triss=triss, yen=yen):
+                path = walk_quest(r, 214, romance(triss, yen), {5})
+                self.assertEqual([obj for obj in path if obj in (244, 252)], expected)
+                self.assertEqual(path.count(5), 1)
+                self.assertNotIn(216, path)
+        path = walk_quest(r, 214, {}, {216})
+        self.assertIn(216, path)
+
+    def test_manor_yen_deactivation_has_a_hard_community_import(self):
+        r = self.resource(HOUSE)
+        # Follow the actual transition after Yen's scene to its despawn action.
+        check = r.connections(244)[0][1][0][0]
+        remove = next(targets[0][0] for socket, targets in r.connections(check) if socket == 'True')
+        action = next(i for i, chunk in enumerate(r.chunks, 1)
+                      if chunk.parent == remove and r.kind(i) == 'CDeactivateSpawnset')
+        handle = integer(r, action, 'spawnset')
+        self.assertLess(handle, 0)
+        path_offset, kind, flags = struct.unpack_from('<IHH', r.table_data[2], (-handle - 1) * 8)
+        self.assertEqual(flags, 0, 'A CHandle cannot use a soft-only import (flag 4)')
+        self.assertEqual(r.names[kind], 'CCommunity')
+        strings = r.table_data[0]
+        path = strings[path_offset:strings.index(b'\0', path_offset)].decode('utf-8')
+        self.assertTrue(path.endswith('q705_yennefer.w2comm'))
+        soft = struct.unpack_from('<IHH', r.table_data[2], 8 * 8)
+        self.assertEqual(soft[:2], (path_offset, kind))
+        self.assertEqual(soft[2], 4, 'The original soft activation reference must remain soft')
+
+    def test_manor_dual_residents_and_both_dialog_cycles(self):
+        r = self.resource(HOUSE)
+        path = walk_quest(r, 15, romance(True, True), {20})
+        self.assertEqual(path.count(20), 1)
+        self.assertNotIn(156, path, 'Despawned Yen cannot satisfy a distance-to-Yen pause')
+        self.assertIn(157, path, 'Yen must be explicitly reactivated after the Triss intro')
+        spawn_actions = [p.data for obj in path for p in r.props(obj) if r.names[p.name] == 'spawnsets']
+        self.assertEqual(len(spawn_actions), 2)
+        for triss, yen, targets in [(True, True, [22, 52]), (True, False, [22]), (False, True, [52])]:
+            path = walk_quest(r, 130, romance(triss, yen), {22, 52})
+            self.assertEqual([i for i in path if i in (22, 52)], targets)
+
+    def test_dual_empress_tavern_contains_both_companions(self):
+        r = self.resource(Q504)
+        for triss, yen in [(True, True), (False, True), (True, False), (False, False)]:
+            with self.subTest(triss=triss, yen=yen):
+                path = walk_quest(r, 558, romance(triss, yen), {561})
+                self.assertEqual(path.count(561), 1)
+                spawned = [obj for obj in path if r.kind(obj) == 'CQuestStoryPhaseSetterBlock']
+                self.assertEqual(len(spawned), int(triss) + int(yen))
+                self.assertEqual(560 in path, not (triss or yen))
+
+    def test_activity_points_and_movement_paths_separated(self):
+        r = self.resource(TRISS_HOME)
+        self.assertIn('q705_ap_sleep_guest', r.names)
+        house = self.resource(HOUSE)
+        for obj in (29, 37):
+            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'pathTag').data, 'little')], TRISS_PATH)
+        for obj in (47, 48):
+            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'triggerTag').data, 'little')], TRISS_TRIGGER)
+        self.assertEqual(house.connections(283)[0], ('True', [(284, 'In')]))
+        self.assertEqual(self.resource(BOB_FIX).connections(442)[0], ('True', [(443, 'In')]))
+
+    def test_repeated_dialogue_world_staging_has_a_separate_matching_actionpoint(self):
+        ap, scene = self.resource(AP_LAYER), self.resource(ANCHOR_LAYER)
+        old_ap, old_scene = Resource(self.originals[AP_LAYER]), Resource(self.originals[ANCHOR_LAYER])
+        def position(resource, obj):
+            return struct.unpack_from('<3f', resource.prop(obj, 'transform').data, 1)
+        # This catches the actual 0.1.2 failure: two differently named anchors
+        # at the same place despite different daytime AP tags.
+        self.assertGreater(math.dist(position(scene, 12), position(scene, 16)), 2.5)
+        self.assertGreater(math.dist(position(ap, 13), position(ap, 15)), 2.5)
+        for axis in range(3):
+            ap_shift = position(ap, 15)[axis] - position(old_ap, 15)[axis]
+            scene_shift = position(scene, 16)[axis] - position(old_scene, 16)[axis]
+            self.assertAlmostEqual(ap_shift, scene_shift, delta=0.0001)
+        for obj in (8, 13, 14):
+            self.assertEqual(ap.chunk(obj).data, old_ap.chunk(obj).data)
+        for obj in range(1, len(old_scene.chunks) + 1):
+            if obj != 16:
+                self.assertEqual(scene.chunk(obj).data, old_scene.chunk(obj).data)
+
+    def test_native_triss_voice_actor_and_scene_events_are_not_replaced(self):
+        native = BundleCatalog(self.game / 'content/content0/bundles')
+        path = r'dlc\bob\data\quests\main_quests\quest_files\q705_epilog\scenes\q705_20b_triss_visit_vineyard.w2scene'
+        self.assertNotIn(path, self.resources)
+        scene = Resource(native.extract(path))
+        self.assertEqual(scene.names[integer(scene, 605, 'id')], 'TRISS')
+        tags = scene.prop(605, 'actorTags').data
+        self.assertEqual([scene.names[i] for i in struct.unpack_from('<'+'H'*tags[0], tags, 1)], ['q705_triss'])
+        phase = Resource(native.extract(r'dlc\bob\data\quests\bob_quest_npc_default_dialogues.w2phase'))
+        tags = phase.prop(194, 'actorTags').data
+        self.assertEqual([phase.names[i] for i in struct.unpack_from('<'+'H'*tags[0], tags, 1)], ['q705_triss'])
+
+    def test_streamed_second_furniture_matches_native_scene_relative_placement(self):
+        r, old = self.resource(DECO_LAYER), Resource(self.originals[DECO_LAYER])
+        self.assertEqual(r.chunk(3).data, old.chunk(3).data, 'Yen baked sector must remain unchanged')
+        self.assertEqual(r.chunk(2).data, old.chunk(2).data)
+        self.assertEqual(len(r.chunks), len(old.chunks) + 4)
+        raw, meshes, objects, start = sector_objects(old)
+        metadata = Metadata((self.game / 'content/metadata.store').read_bytes())
+        hashes = {struct.unpack('<qQ', row)[0] & 0xffffffffffffffff: struct.unpack('<qQ', row)[1]
+                  for row in metadata.sections[6]}
+        original_anchor = Resource(self.originals[ANCHOR_LAYER])
+        new_anchor = self.resource(ANCHOR_LAYER)
+        p0 = struct.unpack_from('<3f', original_anchor.prop(16, 'transform').data, 1)
+        p1 = struct.unpack_from('<3f', new_anchor.prop(16, 'transform').data, 1)
+        shift = [b-a for a,b in zip(p0,p1)]
+        def mesh_corners(index):
+            off = start + objects[index][3]
+            basis = struct.unpack_from('<9f',raw,off)
+            origin = struct.unpack_from('<3f',raw,off+36)
+            bounds = meshes[struct.unpack_from('<H',raw,off+56)[0]][:6]
+            return [tuple(origin[a]+sum(v[i]*basis[i*3+a] for i in range(3)) for a in range(3))
+                    for v in [(x,y,z) for x in (bounds[0],bounds[3]) for y in (bounds[1],bounds[4]) for z in (bounds[2],bounds[5])]]
+        old_chair = mesh_corners(1)
+        new_chair = [tuple(p[a]+shift[a] for a in range(3)) for p in old_chair]
+        self.assertTrue(any(max(p[a] for p in old_chair)<min(p[a] for p in new_chair)
+                            or max(p[a] for p in new_chair)<min(p[a] for p in old_chair) for a in range(3)),
+                        'Chair world-space bounds must not overlap')
+        inner_guids = set()
+        for entity, source_index in zip(range(4,8), (1,3,5,6)):
+            self.assertEqual(r.kind(entity), 'CEntity')
+            t = r.prop(entity, 'transform').data
+            position = struct.unpack_from('<3f', t, 1)
+            descriptor = objects[source_index]
+            source_offset = start + descriptor[3]
+            old_position = struct.unpack_from('<3f', raw, source_offset+36)
+            for axis in range(3):
+                self.assertAlmostEqual(position[axis]-old_position[axis], shift[axis], delta=0.0001)
+            # Independent streamed entities do not belong to the baked sector.
+            # Native world CLayerInfo 6696 has no bounding box; this quest layer
+            # is loaded explicitly. Keep the furniture local to the native site.
+            self.assertLess(math.dist(position, old_position), 7.0)
+            self.assertTrue(all(math.isfinite(v) for v in position))
+            # Reconstruct the runtime entity's basis independently and compare
+            # it to the cooked source, including the table/jug's native scale.
+            rx,ry,rz = map(math.radians, struct.unpack_from('<3f', t, 13))
+            sx,sy,sz = struct.unpack_from('<3f', t, 25)
+            cx,cy,cz,snx,sny,snz = math.cos(rx),math.cos(ry),math.cos(rz),math.sin(rx),math.sin(ry),math.sin(rz)
+            basis = [cy*cz*sx, cy*snz*sx, -sny*sx,
+                     (snx*sny*cz-cx*snz)*sy,(snx*sny*snz+cx*cz)*sy,snx*cy*sy,
+                     (cx*sny*cz+snx*snz)*sz,(cx*sny*snz-snx*cz)*sz,cx*cy*sz]
+            for actual,expected in zip(basis,struct.unpack_from('<9f',raw,source_offset)):
+                self.assertAlmostEqual(actual,expected,delta=0.00001)
+            data = r.prop(entity, 'streamingDataBuffer').data
+            self.assertEqual(struct.unpack_from('<I',data)[0],len(data)-4)
+            inner = Resource(data[4:]);self.assertEqual(inner.build(),data[4:])
+            self.assertEqual(len(inner.chunks),1)
+            self.assertEqual(inner.kind(1),'CStaticMeshComponent')
+            self.assertEqual(integer(inner,1,'mesh'),-1)
+            path_offset,kind,flags = struct.unpack('<IHH',inner.table_data[2])
+            path = inner.table_data[0][path_offset:inner.table_data[0].index(b'\0',path_offset)].decode()
+            mesh_index = struct.unpack_from('<H',raw,source_offset+56)[0]
+            fid = hashes[meshes[mesh_index][6]]
+            self.assertEqual(path,metadata.string(struct.unpack_from('<I',metadata.sections[0][fid])[0]))
+            self.assertEqual((inner.names[kind],flags),('CMesh',0))
+            guid = inner.prop(1,'guid').data
+            self.assertNotIn(guid,inner_guids);inner_guids.add(guid)
+            self.assertEqual(inner.prop(1,'transform').data,b'\x01'+struct.pack('<3f',0,0,0))
+            flags = inner.prop(1,'drawableFlags').data
+            flag_names = {inner.names[i] for i in struct.unpack('<'+'H'*(len(flags)//2),flags)}
+            self.assertTrue({'DF_IsVisible','DF_CastShadows'} <= flag_names)
+            self.assertEqual(inner.names[integer(inner,1,'pathLibCollisionType')],'PLC_Dynamic')
+
+    def test_layer_component_references_and_guids_resolve_after_entity_cloning(self):
+        for path in (AP_LAYER,TRIGGER_LAYER,DECO_LAYER):
+            r,old = self.resource(path),Resource(self.originals[path])
+            guid_set = {p.data for obj in range(1,len(old.chunks)+1) for p in old.props(obj) if old.names[p.name]=='guid'}
+            entities = r.prop(1,'entities').data
+            listed = struct.unpack_from('<'+'I'*struct.unpack_from('<I',entities)[0],entities,4)
+            for obj in range(len(old.chunks)+1,len(r.chunks)+1):
+                for prop in r.props(obj):
+                    if r.names[prop.name]=='guid':
+                        self.assertNotIn(prop.data,guid_set);guid_set.add(prop.data)
+                if r.chunk(obj).parent!=1:continue
+                self.assertIn(obj,listed)
+                _,end = read_properties(r.chunk(obj).data,1)
+                tail = r.chunk(obj).data[end:]
+                self.assertEqual(tail[:8],b'\0'*8)
+                count,pos = read_vlq(tail,8)
+                for i in range(count):
+                    target = struct.unpack_from('<I',tail,pos+i*4)[0]
+                    self.assertGreater(target,len(old.chunks))
+                    self.assertEqual(r.chunk(target).parent,obj)
+
+    def test_triss_bed_route_uses_native_guest_stairs_without_changing_yen_or_ciri(self):
+        r,old = self.resource(AP_LAYER),Resource(self.originals[AP_LAYER])
+        for obj in (11,12,17,18):
+            self.assertEqual(r.chunk(obj).data,old.chunk(obj).data)
+        points = path_world_points(r,21,22)
+        guest_position = struct.unpack_from('<3f',r.prop(6,'transform').data,1)
+        chair_position = struct.unpack_from('<3f',r.prop(15,'transform').data,1)
+        self.assertLess(math.dist(points[-1],guest_position),1.0)
+        self.assertLess(math.dist(points[0],chair_position),2.0)
+        ciri = path_world_points(old,11,12)
+        sorceress = path_world_points(old,17,18)
+        self.assertEqual(len(points),1+17+len(ciri[25:]))
+        for actual,expected in zip(points[1:18],sorceress[:17]):
+            self.assertLess(math.dist(actual,expected),0.0001)
+        for actual,expected in zip(points[18:],ciri[25:]):
+            self.assertLess(math.dist(actual,expected),0.0001)
+
+    def test_triss_own_dialogue_trigger_has_consistent_world_polygon_and_bounds(self):
+        r,old = self.resource(TRIGGER_LAYER),Resource(self.originals[TRIGGER_LAYER])
+        for obj in range(2,len(old.chunks)+1):
+            self.assertEqual(r.chunk(obj).data,old.chunk(obj).data)
+        tag = r.prop(14,'tags').data
+        self.assertEqual(r.names[struct.unpack_from('<H',tag,1)[0]],TRISS_TRIGGER)
+        self.assertEqual(r.prop(15,'localPoints').data,old.prop(9,'localPoints').data)
+        old_points = inline_array(old.prop(9,'worldPoints').data)
+        new_points = inline_array(r.prop(15,'worldPoints').data)
+        for old_point,new_point in zip(old_points,new_points):
+            for axis,delta in zip(['X','Y','Z'],OFFSET):
+                before = struct.unpack('<f',field(old,old_point,axis).data)[0]
+                after = struct.unpack('<f',field(r,new_point,axis).data)[0]
+                self.assertAlmostEqual(after-before,delta,delta=0.0001)
+        old_box = fields(old,old.prop(9,'boundingBox').data)
+        new_box = fields(r,r.prop(15,'boundingBox').data)
+        for before,after in zip(old_box,new_box):
+            for axis,delta in zip(['X','Y','Z'],OFFSET):
+                v0 = struct.unpack('<f',field(old,fields(old,before.data),axis).data)[0]
+                v1 = struct.unpack('<f',field(r,fields(r,after.data),axis).data)[0]
+                self.assertAlmostEqual(v1-v0,delta,delta=0.0001)
+
+    def test_new_chair_avoids_native_flower_beds(self):
+        native = BundleCatalog(self.game / 'content/content0/bundles')
+        furniture = self.resource(DECO_LAYER)
+        x, y, z = struct.unpack_from('<3f', furniture.prop(4, 'transform').data, 1)
+        clearance, instances = math.inf, 0
+        for cell_x in (-448, -384, -320):
+            for cell_y in (-832, -768):
+                path = rf'dlc\bob\data\levels\bob\source_foliage\foliage_{cell_x:.2f}_{cell_y:.2f}.flyr'
+                resource = Resource(native.extract(path))
+                raw = resource.chunk(1).data
+                _, pos = read_properties(raw, 1)
+                for radius in (2.2, .8):
+                    groups, pos = read_vlq(raw, pos)
+                    for _ in range(groups):
+                        handle = struct.unpack_from('<i', raw, pos)[0]; pos += 4
+                        self.assertLess(handle, 0)
+                        offset = struct.unpack_from('<I', resource.table_data[2], (-handle-1)*8)[0]
+                        name = resource.table_data[0][offset:resource.table_data[0].index(b'\0', offset)].decode('utf-8')
+                        count, pos = read_vlq(raw, pos)
+                        for _ in range(count):
+                            px, py, pz, _, _, _ = struct.unpack_from('<6f', raw, pos); pos += 24
+                            if 'green_low' in name or abs(pz-z)>2.5 or math.hypot(px-x, py-y)>10:
+                                continue
+                            instances += 1
+                            vx, vy = px-x, py-y
+                            lx, ly = vx*.62866765-vy*.77767408, vx*.77767408+vy*.62866765
+                            gap = math.hypot(max(abs(lx)-1.15, 0), max(abs(ly)-.55, 0))-radius
+                            clearance = min(clearance, gap)
+                self.assertEqual(pos, len(raw))
+        self.assertGreater(instances, 20)
+        self.assertGreater(clearance, .5, 'Chair footprint overlaps native shrub/flower exclusion zones')
+
+    def test_romance_fact_mutations_are_unchanged(self):
+        # No cheat that periodically erases/re-adds a romance, no automatic
+        # backfill of failed choices, and no new deletion of romance facts.
+        for name in PATHS:
+            r = self.resource(name)
+            old = Resource(self.originals[name])
+            def mutations(resource):
+                result = []
+                for obj in range(1, len(resource.chunks) + 1):
+                    if resource.kind(obj) == 'CQuestFactsDBChangingBlock':
+                        fact = read_ws_string(resource.prop(obj, 'factID').data)
+                        if fact in ('q309_triss_lover', 'q309_triss_stayed', 'sq202_yen_girlfriend'):
+                            result.append((fact, integer(resource, obj, 'value')))
+                return sorted(result)
+            self.assertEqual(mutations(r), mutations(old))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--game', required=True)
+    parser.add_argument('--report', required=True)
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory(prefix='dual-romance-', dir=Path(__file__).resolve().parent.parent) as temporary:
+        output = Path(temporary)
+        resources, originals, _ = build(args.game, output)
+        ModChecks.resources, ModChecks.originals = resources, originals
+        ModChecks.game, ModChecks.output = Path(args.game), output
+        result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(ModChecks))
+        report = dict(tests_run=result.testsRun, failures=len(result.failures), errors=len(result.errors),
+                      passed=result.wasSuccessful(), runtime_validated=False,
+                      scope='Native resource roundtrip, CRC, container/index, branch traversal, scene links and activities')
+        Path(args.report).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+        raise SystemExit(0 if result.wasSuccessful() else 1)

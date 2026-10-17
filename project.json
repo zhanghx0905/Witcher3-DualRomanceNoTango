@@ -1,0 +1,14 @@
+{
+  "name": "Dual Romance / No Tango",
+  "repository_name": "DualRomanceNoTango",
+  "mod_directory": "modDualRomanceNoTango",
+  "version": "0.1.4-experimental",
+  "author": "Hexiao Zhang",
+  "source_license": "BSD-3-Clause",
+  "release_date": "2026-10-17",
+  "python_minimum": "3.10",
+  "steam_app_id": 292030,
+  "steam_build_id": "25773555",
+  "runtime_validation": "incomplete",
+  "workshop_status": "materials_prepared_not_uploaded"
+}

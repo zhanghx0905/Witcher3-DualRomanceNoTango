@@ -1,0 +1,15 @@
+{
+  "quests\\part_3\\q310_pregeels_new.w2phase": "063b211f2d8a10a27d9175452de2b384b57e3c026a3a7ca82c7c4dc72f1a3be7",
+  "quests\\part_3\\quest_files\\q310_pregeels\\scenes\\q310_44_wait_for_lodge.w2scene": "61355773f1182daa6799dcac9a0de3df7acd31a997a29f984d863ac6597524e8",
+  "quests\\videos_scenes\\ending_boards_scene.w2scene": "bf1400937932b773359254f72186b3ee61a6845898d5a4c2cb1252f0469d7dbe",
+  "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase": "725a2535fd0813604df9b5e0542eb1ab8b8256a264a8b11d696dcab5977692c3",
+  "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_triss.w2comm": "a554e9d509c8a596aca6dbc74b8e6ba8fd07ae4d18ed888ccfa3909364f237f2",
+  "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase": "cf9b7e4cc2d7af948027c6414e3496a7b843564925b1f63d714105b573f23aaf",
+  "quests\\epilogues\\q504_ciri_empress.w2phase": "4392431fdc537d2d2b49df8076843f03b28861f36990df8c03ec978c88819182",
+  "quests\\main_npcs\\community_files\\triss.w2comm": "fd6392e5252a0a826fad9bedc5d3cf50dca7f8c9e880cda663e1e68dd7814c90",
+  "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l": "9421569ba83cba34205cf3ae74267c5a6b77b7225c5e925059010957fea4b14b",
+  "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
+  "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
+  "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
+  "dlc\\bob\\data\\quests\\minor_quests\\quest_files\\mq7024_home\\entities\\mq7024_witcher_bed_rich_collision.w2ent": "cfe23cf8a4c09ac95f62d85f67d418899d0548f840b382cf51a2d371a3c93325"
+}

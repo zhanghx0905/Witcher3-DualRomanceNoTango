@@ -1,0 +1,141 @@
+{
+  "name": "Dual Romance / No Tango",
+  "version": "0.1.4-experimental",
+  "target": "Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7",
+  "runtime_validated": false,
+  "resources": [
+    {
+      "path": "quests\\part_3\\q310_pregeels_new.w2phase",
+      "source_sha256": "063b211f2d8a10a27d9175452de2b384b57e3c026a3a7ca82c7c4dc72f1a3be7",
+      "patched_sha256": "0417f41b435315daeb1a909106839c7a565c0891aa0b021def0291a1cd7ea559",
+      "source_bytes": 666269,
+      "patched_bytes": 666269,
+      "source_objects": 4778,
+      "patched_objects": 4778
+    },
+    {
+      "path": "quests\\part_3\\quest_files\\q310_pregeels\\scenes\\q310_44_wait_for_lodge.w2scene",
+      "source_sha256": "61355773f1182daa6799dcac9a0de3df7acd31a997a29f984d863ac6597524e8",
+      "patched_sha256": "ff814c4bdf1950f4f66eaf7e6921d9510d305018c6764ed33a0907851f3862a5",
+      "source_bytes": 727830,
+      "patched_bytes": 727830,
+      "source_objects": 2230,
+      "patched_objects": 2230
+    },
+    {
+      "path": "quests\\videos_scenes\\ending_boards_scene.w2scene",
+      "source_sha256": "bf1400937932b773359254f72186b3ee61a6845898d5a4c2cb1252f0469d7dbe",
+      "patched_sha256": "19306ffb5ef216904f1fc4f023345097315e8f84a18ed2c2e316f17ef5f25460",
+      "source_bytes": 24218,
+      "patched_bytes": 24482,
+      "source_objects": 217,
+      "patched_objects": 221
+    },
+    {
+      "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase",
+      "source_sha256": "725a2535fd0813604df9b5e0542eb1ab8b8256a264a8b11d696dcab5977692c3",
+      "patched_sha256": "76a4785e8210c328f6f46b5265b2ca3cfa19c2683f97e0c9453c44fcf504e0ce",
+      "source_bytes": 52687,
+      "patched_bytes": 53973,
+      "source_objects": 359,
+      "patched_objects": 370
+    },
+    {
+      "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_triss.w2comm",
+      "source_sha256": "a554e9d509c8a596aca6dbc74b8e6ba8fd07ae4d18ed888ccfa3909364f237f2",
+      "patched_sha256": "1cc33e328517d07c1267e43f4f217552657c2f68687516f499c82873c4a01d02",
+      "source_bytes": 2269,
+      "patched_bytes": 2297,
+      "source_objects": 1,
+      "patched_objects": 1
+    },
+    {
+      "path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
+      "source_sha256": "cf9b7e4cc2d7af948027c6414e3496a7b843564925b1f63d714105b573f23aaf",
+      "patched_sha256": "2b9728661f727d696f640b38d64fb48de161d24dd210d51fc5d933d83494bf7a",
+      "source_bytes": 89495,
+      "patched_bytes": 89495,
+      "source_objects": 645,
+      "patched_objects": 645
+    },
+    {
+      "path": "quests\\epilogues\\q504_ciri_empress.w2phase",
+      "source_sha256": "4392431fdc537d2d2b49df8076843f03b28861f36990df8c03ec978c88819182",
+      "patched_sha256": "75376827aea254c79acf0deeecbc5a8eb1e45c1019b44b2aeb74a357a0b78c53",
+      "source_bytes": 106594,
+      "patched_bytes": 107253,
+      "source_objects": 643,
+      "patched_objects": 648
+    },
+    {
+      "path": "quests\\main_npcs\\community_files\\triss.w2comm",
+      "source_sha256": "fd6392e5252a0a826fad9bedc5d3cf50dca7f8c9e880cda663e1e68dd7814c90",
+      "patched_sha256": "56c2a1c4c39a997f52acca5ddf23717c6c1eb9aac9ac6e97104cea4cf1cc7eeb",
+      "source_bytes": 39970,
+      "patched_bytes": 39995,
+      "source_objects": 24,
+      "patched_objects": 24
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l",
+      "source_sha256": "9421569ba83cba34205cf3ae74267c5a6b77b7225c5e925059010957fea4b14b",
+      "patched_sha256": "dd2f91aec781c2ee85d6bc4b17fd03235e088c14fc71a448624fc96158534fdc",
+      "source_bytes": 24497,
+      "patched_bytes": 34234,
+      "source_objects": 20,
+      "patched_objects": 22
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l",
+      "source_sha256": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
+      "patched_sha256": "9dfd2ffacb84f28901694c417be5704dc1045bc862713137742ffda4b5210a47",
+      "source_bytes": 2801,
+      "patched_bytes": 2801,
+      "source_objects": 19,
+      "patched_objects": 19
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l",
+      "source_sha256": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
+      "patched_sha256": "69fc064c46ffe8c0295f568013d19bdba82e385b78c1c4db3151c9521c750ffd",
+      "source_bytes": 13950,
+      "patched_bytes": 16071,
+      "source_objects": 13,
+      "patched_objects": 15
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l",
+      "source_sha256": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
+      "patched_sha256": "f6047f69aa89797b6cdfd507a38708bf8072c0e2e493077b1bd96ceb5c70f2c0",
+      "source_bytes": 2203,
+      "patched_bytes": 8094,
+      "source_objects": 3,
+      "patched_objects": 7
+    }
+  ],
+  "changes": [
+    "q310: Girl Talk bypasses trap setup; resolution bypasses trap-door lock.",
+    "q310 lodge scene: bypass revenge invitation in both conversation entry paths.",
+    "Ending boards: dual plays Yen then Triss; original single/none selection preserved.",
+    "House: Yen intro then Triss intro; shared scene space is serialized; dual residents spawn together.",
+    "House hotfix: Yen deactivation uses a hard-loaded community import, separate from the soft spawn reference.",
+    "House residency hotfix: after leaving Triss behind, activate Yen directly; do not wait for distance to a despawned actor.",
+    "House: start both independent dialogue cycles once; Triss uses her own chair/trigger and a native-segment route to the guest bed.",
+    "Triss home community: original lounge AP for visit and residency; guest bedroom at night; no Ciri-tree AP substitution.",
+    "Stock Blood and Wine reload fix also restores the garden chair for dual romance.",
+    "Ciri empress tavern: spawn both; retain Yen dialogue input, Triss uses a separate existing seat.",
+    "Triss main community: q504 companion uses a different existing tavern seat.",
+    "Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.",
+    "Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.",
+    "Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.",
+    "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched."
+  ],
+  "support_resources": [
+    {
+      "path": "dlc\\bob\\data\\quests\\minor_quests\\quest_files\\mq7024_home\\entities\\mq7024_witcher_bed_rich_collision.w2ent",
+      "sha256": "cfe23cf8a4c09ac95f62d85f67d418899d0548f840b382cf51a2d371a3c93325"
+    }
+  ],
+  "bundle_sha256": "fc4019255c21562a67b6335887a929e4b1532370e2f5b3fee9dc71711d668e86",
+  "metadata_sha256": "e32c85cced494b6afa6251a85a07ba72e1c301b0431cadeaeacde9bd6eb1cc21"
+}
