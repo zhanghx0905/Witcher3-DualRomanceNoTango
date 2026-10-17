@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $PackageRoot) {
-    if (Test-Path -LiteralPath (Join-Path $manifestDirectory 'build-manifest.json')) {
+    if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'build-manifest.json')) {
         $PackageRoot = $PSScriptRoot
     } else {
         $PackageRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'release'
@@ -181,4 +181,3 @@ switch ($Action) {
         Write-Output 'Hash verification does not confirm in-game behavior.'
     }
 }
-
