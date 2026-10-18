@@ -15,5 +15,7 @@
   "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\actionpoints\\in_tavern.w2l": "fb88c7b84f2af5f926cae8e48df3f75fa3f5cb6fdc5d8d51f4e4c6022681ed70",
   "quests\\epilogues\\quest_files\\q504_ciri_empress\\scenes\\q504_01_ciri_start.w2scene": "c3f5def2181bf857b5f4eb85f9eabc196cf45bc02e431c3064b27bbac6096129",
   "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\dialogsets\\tavern.w2l": "6d931ffade0db853436f83eea9829e9ea2f67cd6d87b0b6e22b1df31c9e22d50",
-  "levels\\prolog_village_winter\\village\\tavern\\decorations_ns.w2l": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
+  "levels\\prolog_village_winter\\village\\tavern\\decorations_ns.w2l": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c",
+  "dlc\\bob\\data\\levels\\bob\\bob.w2w": "25b18a2c63e7d89b58a0f8b1fedb557aa685d6f0f91ea21bd455a7fc48e33d90",
+  "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_yennefer.w2comm": "4d887f137f43b4c1356c879688a7fb2f38f86b757167f8b5e2f69c0d80a1474b"
 }

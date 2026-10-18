@@ -9,7 +9,9 @@ from pathlib import Path
 import struct
 
 from build import HOUSE, TRISS_HOME
-from redio import BundleCatalog, Resource
+from redio import BundleCatalog, Resource, encode_properties
+from manor_dual import DUAL_LAYER_SOURCES, DUAL_PHASES
+from manor_layout import inline_array, field
 
 
 def tags(resource, raw):
@@ -30,9 +32,13 @@ def main(game, output, content=None):
               'q705_ap_yen_house', 'q705_ap_triss_house', 'q705_ap_ciri_house',
               'q705_ap_sleep_sorceress', 'q705_ap_sleep_guest'}
     anchors = {}
+    dual_paths = {source:path for path,source in DUAL_LAYER_SOURCES.items()}
     for path in native.items:
         if 'q705_epilog' not in path or not path.endswith('.w2l'):
             continue
+        active_path = dual_paths.get(path,path)
+        if active_path in installed.items:
+            path = active_path
         raw = installed.extract(path) if path in installed.items else native.extract(path)
         if not any(tag.encode() in raw for tag in wanted):
             continue
@@ -72,7 +78,9 @@ def main(game, output, content=None):
     scene_conflict = (separation < 0.1
                       and scenes['yen']['slot_transform'] == scenes['triss']['slot_transform'])
     home = Resource(installed.extract(TRISS_HOME))
-    timetable = home.prop(1, 'storyPhaseTimetable').data
+    rows = inline_array(home.prop(1,'storyPhaseTimetable').data)
+    dual_rows = [row for row in rows if home.names[int.from_bytes(field(home,row,'name').data,'little')] in DUAL_PHASES.values()]
+    timetable = b''.join(encode_properties(row) for row in dual_rows) if dual_rows else home.prop(1,'storyPhaseTimetable').data
     # These are the exact serialized TagList properties, not arbitrary name-table matches.
     def tag_count(tag):
         if tag not in home.names:

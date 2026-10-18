@@ -1,11 +1,12 @@
 {
   "name": "Dual Romance / No Tango",
-  "version": "0.1.5-experimental",
+  "version": "0.1.7-experimental",
   "target": "Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7",
   "runtime_validated": false,
   "resources": [
     {
       "path": "quests\\part_3\\q310_pregeels_new.w2phase",
+      "source_path": "quests\\part_3\\q310_pregeels_new.w2phase",
       "source_sha256": "063b211f2d8a10a27d9175452de2b384b57e3c026a3a7ca82c7c4dc72f1a3be7",
       "patched_sha256": "0417f41b435315daeb1a909106839c7a565c0891aa0b021def0291a1cd7ea559",
       "source_bytes": 666269,
@@ -15,6 +16,7 @@
     },
     {
       "path": "quests\\part_3\\quest_files\\q310_pregeels\\scenes\\q310_44_wait_for_lodge.w2scene",
+      "source_path": "quests\\part_3\\quest_files\\q310_pregeels\\scenes\\q310_44_wait_for_lodge.w2scene",
       "source_sha256": "61355773f1182daa6799dcac9a0de3df7acd31a997a29f984d863ac6597524e8",
       "patched_sha256": "ff814c4bdf1950f4f66eaf7e6921d9510d305018c6764ed33a0907851f3862a5",
       "source_bytes": 727830,
@@ -24,6 +26,7 @@
     },
     {
       "path": "quests\\videos_scenes\\ending_boards_scene.w2scene",
+      "source_path": "quests\\videos_scenes\\ending_boards_scene.w2scene",
       "source_sha256": "bf1400937932b773359254f72186b3ee61a6845898d5a4c2cb1252f0469d7dbe",
       "patched_sha256": "19306ffb5ef216904f1fc4f023345097315e8f84a18ed2c2e316f17ef5f25460",
       "source_bytes": 24218,
@@ -33,33 +36,37 @@
     },
     {
       "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase",
+      "source_path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase",
       "source_sha256": "725a2535fd0813604df9b5e0542eb1ab8b8256a264a8b11d696dcab5977692c3",
-      "patched_sha256": "76a4785e8210c328f6f46b5265b2ca3cfa19c2683f97e0c9453c44fcf504e0ce",
+      "patched_sha256": "94eadcd3d461543efd35704166b225b6ccbf9ab39de2b18d456787255d9eb8b9",
       "source_bytes": 52687,
-      "patched_bytes": 53973,
+      "patched_bytes": 55636,
       "source_objects": 359,
-      "patched_objects": 370
+      "patched_objects": 378
     },
     {
       "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_triss.w2comm",
+      "source_path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_triss.w2comm",
       "source_sha256": "a554e9d509c8a596aca6dbc74b8e6ba8fd07ae4d18ed888ccfa3909364f237f2",
-      "patched_sha256": "1cc33e328517d07c1267e43f4f217552657c2f68687516f499c82873c4a01d02",
+      "patched_sha256": "7a2af65a17bfd279f2bff970f2b296e7554a2204397014ef631dd285f45bcf0d",
       "source_bytes": 2269,
-      "patched_bytes": 2297,
+      "patched_bytes": 2913,
       "source_objects": 1,
       "patched_objects": 1
     },
     {
       "path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
+      "source_path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
       "source_sha256": "cf9b7e4cc2d7af948027c6414e3496a7b843564925b1f63d714105b573f23aaf",
-      "patched_sha256": "2b9728661f727d696f640b38d64fb48de161d24dd210d51fc5d933d83494bf7a",
+      "patched_sha256": "ebc1d918a228fd4bccbda613e02a1156352f26817da727d32b72c0da1c21340f",
       "source_bytes": 89495,
-      "patched_bytes": 89495,
+      "patched_bytes": 102022,
       "source_objects": 645,
-      "patched_objects": 645
+      "patched_objects": 728
     },
     {
       "path": "quests\\epilogues\\q504_ciri_empress.w2phase",
+      "source_path": "quests\\epilogues\\q504_ciri_empress.w2phase",
       "source_sha256": "4392431fdc537d2d2b49df8076843f03b28861f36990df8c03ec978c88819182",
       "patched_sha256": "1f8320b4e134a50b35ad4269a8506e2af856a843e06d8e68dccc429d705a490b",
       "source_bytes": 106594,
@@ -69,6 +76,7 @@
     },
     {
       "path": "quests\\main_npcs\\community_files\\triss.w2comm",
+      "source_path": "quests\\main_npcs\\community_files\\triss.w2comm",
       "source_sha256": "fd6392e5252a0a826fad9bedc5d3cf50dca7f8c9e880cda663e1e68dd7814c90",
       "patched_sha256": "d64d1b1d176f330f0afa09e88fe3967cdee06b7786bb3441688cdacecb26227c",
       "source_bytes": 39970,
@@ -78,42 +86,27 @@
     },
     {
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l",
       "source_sha256": "9421569ba83cba34205cf3ae74267c5a6b77b7225c5e925059010957fea4b14b",
-      "patched_sha256": "dd2f91aec781c2ee85d6bc4b17fd03235e088c14fc71a448624fc96158534fdc",
+      "patched_sha256": "6c690e4467edff03a825f5a20a4a790b95c5c443e9a9aca064f5e8fe285125a3",
       "source_bytes": 24497,
-      "patched_bytes": 34234,
+      "patched_bytes": 40736,
       "source_objects": 20,
-      "patched_objects": 22
-    },
-    {
-      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l",
-      "source_sha256": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
-      "patched_sha256": "9dfd2ffacb84f28901694c417be5704dc1045bc862713137742ffda4b5210a47",
-      "source_bytes": 2801,
-      "patched_bytes": 2801,
-      "source_objects": 19,
-      "patched_objects": 19
+      "patched_objects": 24
     },
     {
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l",
       "source_sha256": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
-      "patched_sha256": "69fc064c46ffe8c0295f568013d19bdba82e385b78c1c4db3151c9521c750ffd",
+      "patched_sha256": "b4cdedc575bbd064b7a439d190906499db1a401ddd4819210ed9046188596e1c",
       "source_bytes": 13950,
-      "patched_bytes": 16071,
+      "patched_bytes": 18195,
       "source_objects": 13,
-      "patched_objects": 15
-    },
-    {
-      "path": "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l",
-      "source_sha256": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
-      "patched_sha256": "f6047f69aa89797b6cdfd507a38708bf8072c0e2e493077b1bd96ceb5c70f2c0",
-      "source_bytes": 2203,
-      "patched_bytes": 8094,
-      "source_objects": 3,
-      "patched_objects": 7
+      "patched_objects": 17
     },
     {
       "path": "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\actionpoints\\in_tavern.w2l",
+      "source_path": "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\actionpoints\\in_tavern.w2l",
       "source_sha256": "fb88c7b84f2af5f926cae8e48df3f75fa3f5cb6fdc5d8d51f4e4c6022681ed70",
       "patched_sha256": "57cb979beb1fb8711a402bf541752b02bd38ac7cdeae2a75620608bcc67d9f13",
       "source_bytes": 6992,
@@ -123,12 +116,73 @@
     },
     {
       "path": "quests\\epilogues\\quest_files\\q504_ciri_empress\\scenes\\q504_01_ciri_start.w2scene",
+      "source_path": "quests\\epilogues\\quest_files\\q504_ciri_empress\\scenes\\q504_01_ciri_start.w2scene",
       "source_sha256": "c3f5def2181bf857b5f4eb85f9eabc196cf45bc02e431c3064b27bbac6096129",
       "patched_sha256": "9785b657020f3e6386b4fa7f20c6012d3ec18b512f4d180d477b7dde5e59e2a1",
       "source_bytes": 148100,
       "patched_bytes": 187652,
       "source_objects": 362,
       "patched_objects": 482
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\bob.w2w",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\bob.w2w",
+      "source_sha256": "25b18a2c63e7d89b58a0f8b1fedb557aa685d6f0f91ea21bd455a7fc48e33d90",
+      "patched_sha256": "859b92ab3b9d664c4d20429b1adba8d6ac9fa4edd42dd8cfce5b3c551a8a4289",
+      "source_bytes": 12928723,
+      "patched_bytes": 12929649,
+      "source_objects": 11299,
+      "patched_objects": 11304
+    },
+    {
+      "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_yennefer.w2comm",
+      "source_path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_yennefer.w2comm",
+      "source_sha256": "4d887f137f43b4c1356c879688a7fb2f38f86b757167f8b5e2f69c0d80a1474b",
+      "patched_sha256": "b42308e406510a5127093087b91a5a333ccb13c9c7c52946d88ac0193f141a50",
+      "source_bytes": 2228,
+      "patched_bytes": 2844,
+      "source_objects": 1,
+      "patched_objects": 1
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\guests.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l",
+      "source_sha256": "9421569ba83cba34205cf3ae74267c5a6b77b7225c5e925059010957fea4b14b",
+      "patched_sha256": "3d790bc082b22a152c6776046091e3aef0e4da5d51d56b016d3c9770ff16b2c4",
+      "source_bytes": 24497,
+      "patched_bytes": 43964,
+      "source_objects": 20,
+      "patched_objects": 24
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\dialogsets.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l",
+      "source_sha256": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
+      "patched_sha256": "6b7187347542767468515c2bdf8d667d75a00b23458ec17924092cf89273d300",
+      "source_bytes": 2801,
+      "patched_bytes": 2801,
+      "source_objects": 19,
+      "patched_objects": 19
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\triggers.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l",
+      "source_sha256": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
+      "patched_sha256": "5305d708a2dde6a91f93d5f0fded7c8471b15369579b3381702f2f810dd5fcc6",
+      "source_bytes": 13950,
+      "patched_bytes": 18195,
+      "source_objects": 13,
+      "patched_objects": 17
+    },
+    {
+      "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\decor.w2l",
+      "source_path": "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l",
+      "source_sha256": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
+      "patched_sha256": "3a2eb8346e60f0d061ae28c033493a255b5496778a1a330899b67686a2b0b4d9",
+      "source_bytes": 2203,
+      "patched_bytes": 8094,
+      "source_objects": 3,
+      "patched_objects": 7
     }
   ],
   "changes": [
@@ -138,17 +192,22 @@
     "House: Yen intro then Triss intro; shared scene space is serialized; dual residents spawn together.",
     "House hotfix: Yen deactivation uses a hard-loaded community import, separate from the soft spawn reference.",
     "House residency hotfix: after leaving Triss behind, activate Yen directly; do not wait for distance to a despawned actor.",
-    "House: start both independent dialogue cycles once; Triss uses her own chair/trigger and a native-segment route to the guest bed.",
-    "Triss home community: original lounge AP for visit and residency; guest bedroom at night; no Ciri-tree AP substitution.",
-    "Stock Blood and Wine reload fix also restores the garden chair for dual romance.",
+    "House: both welcomes use retail layers and spawn phases; switch dual-only AP/anchor/trigger/furniture layers at the offscreen residency transition.",
+    "Manor triss: native visit and single-romance phases retained; dual residency selects the dual layout. Legacy dual visit phase remains available for saved states.",
+    "Existing-save migration: native terminal-pause deletion marker starts a fresh gated manor fix, including already-completed q705 saves.",
+    "Manor reload: choose dual/native layers and community phases from both romance facts; retain native single-romance furniture selection.",
     "Ciri empress tavern: dual-only community/input/dialogue branch seats both companions at Geralt table; original single-romance branches retained.",
     "Q504 Triss community: added a dual-only phase/timetable; original single-romance phase remains unchanged.",
+    "Single romances: native manor APs and routes retained, with geometry-identical path aliases for saved actions.",
+    "Single romances: native dialogue trigger retained, with matching aliases for saved conditions.",
+    "Q504 dual romance: independent Triss actionpoint at the existing third stool of Geralt/Yen table; native furniture and other actionpoints untouched.",
+    "Q504 opening: dual-only input/dialogset with Geralt, Yen and Triss at the same table; native Yen lines retained; one dedicated three-person overview replaces the two-person shot. Single-romance inputs/timelines remain native.",
+    "Manor: hidden dual-only world layer group; native spatial/furniture layers remain retail for single romances.",
+    "Manor yen: native visit and single-romance phases retained; dual residency selects the dual layout. Legacy dual visit phase remains available for saved states.",
     "Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.",
     "Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.",
     "Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.",
-    "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched.",
-    "Q504 dual romance: independent Triss actionpoint at the existing third stool of Geralt/Yen table; native furniture and other actionpoints untouched.",
-    "Q504 opening: dual-only input/dialogset with Geralt, Yen and Triss at the same table; native Yen lines retained; one dedicated three-person overview replaces the two-person shot. Single-romance inputs/timelines remain native."
+    "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched."
   ],
   "support_resources": [
     {
@@ -164,6 +223,6 @@
       "sha256": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
     }
   ],
-  "bundle_sha256": "23b4b489facf1c62e4b699ed0e485f7b554ec34f3658d21064d9758b412afba4",
-  "metadata_sha256": "0cfb07686c50d1d7d103d390ff2f7e54f45a790231ac8929d1c4e95913273d51"
+  "bundle_sha256": "e7ca110d43fcce70d64090a559c8d54bb23c5e38279a844b449917046f13b475",
+  "metadata_sha256": "50d89adf550b8ea37cc75403b4c2b4d896502e202f1413445e055d9a6c1766f7"
 }

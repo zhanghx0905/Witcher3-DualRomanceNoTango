@@ -33,7 +33,7 @@ def check(root=ROOT):
     hashes=[struct.unpack_from('<Q',row)[0] for row in metadata.sections[6]]
     assert hashes==sorted(hashes) and len(set(hashes))==len(hashes)
     pinned=json.loads((root/'src/supported-sources.json').read_text(encoding='utf-8'))
-    for row in manifest['resources']:assert pinned[row['path']]==row['source_sha256']
+    for row in manifest['resources']:assert pinned[row.get('source_path',row['path'])]==row['source_sha256']
     for row in manifest['support_resources']:assert pinned[row['path']]==row['sha256']
     for filename in ['LICENSE','NOTICE.md','THIRD_PARTY.md','licenses/w3edit-BSD-2-Clause.txt']:
         assert (root/filename).is_file(),filename

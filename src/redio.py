@@ -335,8 +335,16 @@ class Metadata:
         return self.strings[offset:self.strings.index(b'\0', offset)].decode('utf-8')
 
 
-def pack_mod(resources, catalog, source_metadata):
-    """Build a v5 bundle and v7 index; retain source path hashes and flags."""
+def fnv64_path(name):
+    value = 0xcbf29ce484222325
+    for byte in name.encode('utf-8'):
+        value = ((value ^ byte) * 0x100000001b3) & 0xffffffffffffffff
+    return value
+
+
+def pack_mod(resources, catalog, source_metadata, source_paths=None):
+    """Build a v5 bundle/v7 index, using retail type flags for derived files."""
+    source_paths = source_paths or {}
     paths = sorted(resources)
     toc_end = 32 + 304 * len(paths)
     bundle = bytearray(toc_end)
@@ -346,8 +354,16 @@ def pack_mod(resources, catalog, source_metadata):
         compressed = zlib.compress(raw, 9)
         bundle += b'\0' * (-len(bundle) % 16)
         offset = len(bundle)
-        source = catalog.items[name][1]
+        original_path = source_paths.get(name,name)
+        source = catalog.items[original_path][1]
         entry = bytearray(source)
+        if name != original_path:
+            encoded = name.encode('utf-8')
+            assert len(encoded) < 256
+            entry[:256] = encoded+b'\0'*(256-len(encoded))
+            # This optional bundle content identifier is zero in newly built
+            # entries. Resource resolution uses the v7 depot-path hash below.
+            entry[256:272] = b'\0'*16
         struct.pack_into('<Q4I', entry, 272, offset, len(raw), len(compressed), zlib.crc32(raw), 1)
         entries.append((name, offset, len(compressed), len(raw), entry))
         bundle += compressed
@@ -366,7 +382,8 @@ def pack_mod(resources, catalog, source_metadata):
     sections = [[b'\0' * 32], [b'\0' * 24], [b'\0' * 24], [], [b'\0' * 8], [], []]
     directories = {(): 0}
     for fid, (name, offset, packed, unpacked, _) in enumerate(entries, 1):
-        source_id = source_metadata.by_path[name]
+        original_path = source_paths.get(name,name)
+        source_id = source_metadata.by_path[original_path]
         old = struct.unpack('<8I', source_metadata.sections[0][source_id])
         # Retail v7 moves compression to the final u32; buffer_id and
         # has_buffer precede it. Do not use the legacy v6 field order here.
@@ -380,7 +397,9 @@ def pack_mod(resources, catalog, source_metadata):
                 directories[key] = len(sections[4])
                 sections[4].append(struct.pack('<II', intern(key[-1]), directories[key[:-1]]))
         sections[5].append(struct.pack('<III', fid, directories[tuple(components[:-1])], intern(components[-1])))
-        if source_id in source_metadata.hashes:
+        if name != original_path:
+            sections[6].append(struct.pack('<QQ',fnv64_path(name),fid))
+        elif source_id in source_metadata.hashes:
             sections[6].append(struct.pack('<qQ', source_metadata.hashes[source_id], fid))
     # Native v7 binary-searches these as unsigned 64-bit hashes.
     sections[6].sort(key=lambda row: struct.unpack_from('<Q', row)[0])

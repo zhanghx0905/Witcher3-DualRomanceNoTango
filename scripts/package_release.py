@@ -18,7 +18,7 @@ def package(stage):
     validation=json.loads((stage/'validation.json').read_text(encoding='utf-8'))
     audit=json.loads((stage/'coexistence-audit.json').read_text(encoding='utf-8'))
     assert actual['version']==project['version']==reference['version']
-    assert validation['passed'] and validation['tests_run']==27
+    assert validation['passed'] and validation['tests_run']==37
     assert all(row['passed'] for row in audit['checks']) and len(audit['checks'])==5
     for key in ['bundle_sha256','metadata_sha256']:assert actual[key]==reference[key],f'Non-reproducible {project["version"]}: {key}'
     for name in ['compatibility.json','previous-version.json']:
@@ -37,11 +37,15 @@ def package(stage):
 & .\\Install-DualRomance.ps1 -GamePath 'C:\\Games\\The Witcher 3' -Action Install
 ```
 
-从 0.1.4 更新使用 -Action Update，核对安装使用 -Action Verify。更新前自动备份到游戏目录的 ModBackups/DualRomanceNoTango；回退时退出游戏，将备份 content 恢复到 Mods/modDualRomanceNoTango/content。
+从安装器支持的前版更新使用 -Action Update，核对安装使用 -Action Verify。更新前自动备份到游戏目录的 ModBackups/DualRomanceNoTango；回退时退出游戏，将备份 content 恢复到 Mods/modDualRomanceNoTango/content。
 
-0.1.5 将女皇结局酒馆开场的 Triss 调整到同桌第三张原有凳子，并使用专用三人全景；原生单恋爱分支保持原样。需要读取酒馆开场前的存档重播。
+双恋爱时，两位伴侣在女皇结局酒馆中同桌出场，在白鸦庄园使用各自的休息位置和床位。单恋爱时，庄园使用原有家具、床位与活动路线。
 
-27 项离线检查和 5 项庄园配置审计通过。实际坐姿、遮挡和镜头衔接仍待游戏内验收，报告见 validation.json 和 coexistence-audit.json。
+更新庄园布景后请重新启动游戏，跨地图后返回庄园，让图层和活动安排重新加载。重测酒馆演出需要读取开场前的存档。
+
+37 项离线检查和 5 项庄园配置审计通过。用户实测确认双恋爱欢迎正常读取，后续日常流程正常。两段欢迎使用原版图层和生成阶段，双人布局推迟到欢迎后的常驻阶段启用。
+
+已知问题：欢迎结束后、日常流程触发前，后出场的特莉丝会顶替叶奈法，此时不会显示两个躺椅。该过渡阶段尚未修正。其他分支、旧档迁移和全部镜头仍需分别验收；validation.json 和 coexistence-audit.json 只记录离线检查结果。
 
 src 内包含可重建源码，只需 Python 3.10+ 标准库和目标游戏：
 

@@ -12,11 +12,17 @@ import unittest
 
 from build import (BOARDS, BOB_FIX, HOUSE, LODGE, PATHS, Q310, Q504, TRISS_HOME,
                    TRISS_MAIN, build, integer)
-from redio import (BundleCatalog, Metadata, Resource, fnv32_name, read_properties,
+from redio import (BundleCatalog, Metadata, Resource, fnv32_name, fnv64_path, encode_properties, read_properties,
                    read_ws_string, read_vlq)
-from manor_layout import (AP_LAYER, ANCHOR_LAYER, TRIGGER_LAYER, DECO_LAYER, BED_TEMPLATE,
+from manor_layout import (AP_LAYER as NATIVE_AP_LAYER, ANCHOR_LAYER as NATIVE_ANCHOR_LAYER,
+                          TRIGGER_LAYER as NATIVE_TRIGGER_LAYER, DECO_LAYER as NATIVE_DECO_LAYER, BED_TEMPLATE,
                           OFFSET, TRISS_PATH, TRISS_TRIGGER, fields, field,
                           inline_array, path_world_points, sector_objects)
+from manor_dual import (DUAL_AP_LAYER as AP_LAYER, DUAL_ANCHOR_LAYER as ANCHOR_LAYER,
+                        DUAL_TRIGGER_LAYER as TRIGGER_LAYER, DUAL_DECO_LAYER as DECO_LAYER,
+                        DUAL_LAYER_SOURCES, DUAL_GROUP, DUAL_PHASES, YEN_HOME, WORLD,
+                        NATIVE_SPATIAL_GROUPS, NATIVE_DECO_GROUP, YEN_PATH, YEN_TRIGGER,
+                        NATIVE_PATH, NATIVE_TRIGGER, group_tail)
 from tavern_layout import (TAVERN_AP, TAVERN_SCENE, DUAL_PHASE, DUAL_AP, DUAL_INPUT,
                             DUAL_DIALOGSET, DUAL_CAMERA, SHARED_STOOL, YEN_STOOL,
                             SHARED_YAW, SCENE_YAW, point_to_world, timeline_events)
@@ -84,6 +90,10 @@ class ModChecks(unittest.TestCase):
     def resource(self, name):
         return Resource(self.resources[name])
 
+    def properties_except(self, resource, obj, exclude=('guid',)):
+        return {resource.names[p.name]:p.data for p in resource.props(obj)
+                if resource.names[p.name] not in exclude}
+
     def test_all_inputs_roundtrip_without_changes(self):
         for name, raw in self.originals.items():
             with self.subTest(path=name):
@@ -120,6 +130,7 @@ class ModChecks(unittest.TestCase):
         m = Metadata((self.game / 'content/metadata.store').read_bytes())
         c = BundleCatalog(self.game / 'content/content0/bundles')
         for name in PATHS:
+            name = DUAL_LAYER_SOURCES.get(name,name)
             fi = struct.unpack('<8I', m.sections[0][m.by_path[name]])
             self.assertEqual(fi[7], c.items[name][-1])
             self.assertEqual(fi[6], 0)
@@ -242,7 +253,10 @@ class ModChecks(unittest.TestCase):
         path = walk_quest(r, 15, romance(True, True), {20})
         self.assertEqual(path.count(20), 1)
         self.assertNotIn(156, path, 'Despawned Yen cannot satisfy a distance-to-Yen pause')
-        self.assertIn(157, path, 'Yen must be explicitly reactivated after the Triss intro')
+        phases = [r.names[int.from_bytes(r.prop(i,'phase').data,'little')]
+                  for obj in path for i,c in enumerate(r.chunks,1)
+                  if c.parent==obj and r.kind(i)=='CActivateStoryPhase']
+        self.assertEqual(phases,[DUAL_PHASES['q705_cycle']]*2)
         spawn_actions = [p.data for obj in path for p in r.props(obj) if r.names[p.name] == 'spawnsets']
         self.assertEqual(len(spawn_actions), 2)
         for triss, yen, targets in [(True, True, [22, 52]), (True, False, [22]), (False, True, [52])]:
@@ -370,11 +384,15 @@ class ModChecks(unittest.TestCase):
         self.assertIn('q705_ap_sleep_guest', r.names)
         house = self.resource(HOUSE)
         for obj in (29, 37):
-            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'pathTag').data, 'little')], TRISS_PATH)
+            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'pathTag').data, 'little')], NATIVE_PATH)
         for obj in (47, 48):
-            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'triggerTag').data, 'little')], TRISS_TRIGGER)
-        self.assertEqual(house.connections(283)[0], ('True', [(284, 'In')]))
-        self.assertEqual(self.resource(BOB_FIX).connections(442)[0], ('True', [(443, 'In')]))
+            self.assertEqual(house.names[int.from_bytes(house.prop(obj, 'triggerTag').data, 'little')], NATIVE_TRIGGER)
+        for obj in (59,67):
+            self.assertEqual(house.names[integer(house,obj,'pathTag')],YEN_PATH)
+        for obj in (76,77):
+            self.assertEqual(house.names[integer(house,obj,'triggerTag')],YEN_TRIGGER)
+        self.assertEqual(house.connections(283)[0], ('True', []))
+        self.assertEqual(self.resource(BOB_FIX).connections(442)[0], ('True', [(439, ' ')]))
 
     def test_repeated_dialogue_world_staging_has_a_separate_matching_actionpoint(self):
         ap, scene = self.resource(AP_LAYER), self.resource(ANCHOR_LAYER)
@@ -390,10 +408,10 @@ class ModChecks(unittest.TestCase):
             scene_shift = position(scene, 16)[axis] - position(old_scene, 16)[axis]
             self.assertAlmostEqual(ap_shift, scene_shift, delta=0.0001)
         for obj in (8, 13, 14):
-            self.assertEqual(ap.chunk(obj).data, old_ap.chunk(obj).data)
+            self.assertEqual(self.properties_except(ap,obj),self.properties_except(old_ap,obj))
         for obj in range(1, len(old_scene.chunks) + 1):
             if obj != 16:
-                self.assertEqual(scene.chunk(obj).data, old_scene.chunk(obj).data)
+                self.assertEqual(self.properties_except(scene,obj),self.properties_except(old_scene,obj))
 
     def test_native_triss_voice_actor_and_scene_events_are_not_replaced(self):
         native = BundleCatalog(self.game / 'content/content0/bundles')
@@ -410,7 +428,7 @@ class ModChecks(unittest.TestCase):
     def test_streamed_second_furniture_matches_native_scene_relative_placement(self):
         r, old = self.resource(DECO_LAYER), Resource(self.originals[DECO_LAYER])
         self.assertEqual(r.chunk(3).data, old.chunk(3).data, 'Yen baked sector must remain unchanged')
-        self.assertEqual(r.chunk(2).data, old.chunk(2).data)
+        self.assertEqual(self.properties_except(r,2),self.properties_except(old,2))
         self.assertEqual(len(r.chunks), len(old.chunks) + 4)
         raw, meshes, objects, start = sector_objects(old)
         metadata = Metadata((self.game / 'content/metadata.store').read_bytes())
@@ -479,7 +497,7 @@ class ModChecks(unittest.TestCase):
             self.assertEqual(inner.names[integer(inner,1,'pathLibCollisionType')],'PLC_Dynamic')
 
     def test_layer_component_references_and_guids_resolve_after_entity_cloning(self):
-        for path in (AP_LAYER,TRIGGER_LAYER,DECO_LAYER):
+        for path in (AP_LAYER,TRIGGER_LAYER,DECO_LAYER,NATIVE_AP_LAYER,NATIVE_TRIGGER_LAYER):
             r,old = self.resource(path),Resource(self.originals[path])
             guid_set = {p.data for obj in range(1,len(old.chunks)+1) for p in old.props(obj) if old.names[p.name]=='guid'}
             entities = r.prop(1,'entities').data
@@ -502,7 +520,8 @@ class ModChecks(unittest.TestCase):
     def test_triss_bed_route_uses_native_guest_stairs_without_changing_yen_or_ciri(self):
         r,old = self.resource(AP_LAYER),Resource(self.originals[AP_LAYER])
         for obj in (11,12,17,18):
-            self.assertEqual(r.chunk(obj).data,old.chunk(obj).data)
+            excluded = ('guid','tags') if obj == 17 else ('guid',)
+            self.assertEqual(self.properties_except(r,obj,excluded),self.properties_except(old,obj,excluded))
         points = path_world_points(r,21,22)
         guest_position = struct.unpack_from('<3f',r.prop(6,'transform').data,1)
         chair_position = struct.unpack_from('<3f',r.prop(15,'transform').data,1)
@@ -519,7 +538,8 @@ class ModChecks(unittest.TestCase):
     def test_triss_own_dialogue_trigger_has_consistent_world_polygon_and_bounds(self):
         r,old = self.resource(TRIGGER_LAYER),Resource(self.originals[TRIGGER_LAYER])
         for obj in range(2,len(old.chunks)+1):
-            self.assertEqual(r.chunk(obj).data,old.chunk(obj).data)
+            excluded = ('guid','tags') if obj == 8 else ('guid',)
+            self.assertEqual(self.properties_except(r,obj,excluded),self.properties_except(old,obj,excluded))
         tag = r.prop(14,'tags').data
         self.assertEqual(r.names[struct.unpack_from('<H',tag,1)[0]],TRISS_TRIGGER)
         self.assertEqual(r.prop(15,'localPoints').data,old.prop(9,'localPoints').data)
@@ -569,6 +589,230 @@ class ModChecks(unittest.TestCase):
                 self.assertEqual(pos, len(raw))
         self.assertGreater(instances, 20)
         self.assertGreater(clearance, .5, 'Chair footprint overlaps native shrub/flower exclusion zones')
+
+    def test_single_romance_native_communities_and_triss_cycle_are_retained(self):
+        for path in [TRISS_HOME,YEN_HOME]:
+            r,old = self.resource(path),Resource(self.originals[path])
+            before = inline_array(old.prop(1,'storyPhaseTimetable').data)
+            after = inline_array(r.prop(1,'storyPhaseTimetable').data)
+            self.assertGreaterEqual(len(after),len(before))
+            for native,current in zip(before,after):
+                self.assertEqual(encode_properties(native),encode_properties(current))
+            old_table = inline_array(old.prop(1,'communityTable').data)
+            new_table = inline_array(r.prop(1,'communityTable').data)
+            for native,current in zip(old_table,new_table):
+                old_phases = inline_array(field(old,native,'storyPhases').data)
+                new_phases = inline_array(field(r,current,'storyPhases').data)
+                for a,b in zip(old_phases,new_phases):
+                    self.assertEqual(encode_properties(a),encode_properties(b))
+        house,old = self.resource(HOUSE),Resource(self.originals[HOUSE])
+        # This includes both native bed-route parameter objects with parent=0.
+        for obj in list(range(22,52))+[158,165,246,254]:
+            self.assertEqual(house.chunk(obj).data,old.chunk(obj).data,obj)
+        for triss,yen in [(True,False),(False,True)]:
+            facts = romance(triss,yen)
+            native_path = walk_quest(old,214,facts,{5})
+            current_path = walk_quest(house,214,facts,{5})
+            kinds = {'CQuestStoryPhaseSetterBlock','CQuestSceneBlock'}
+            self.assertEqual([i for i in current_path if house.kind(i) in kinds],
+                             [i for i in native_path if old.kind(i) in kinds])
+
+    def test_single_manor_objects_furniture_and_route_geometry_remain_native(self):
+        self.assertFalse(NATIVE_ANCHOR_LAYER in self.resources,'Native manor dialogset layer must not be overridden')
+        self.assertFalse(NATIVE_DECO_LAYER in self.resources,'Native garden furniture layer must not be overridden')
+        for path in [NATIVE_AP_LAYER,NATIVE_TRIGGER_LAYER]:
+            r,old = self.resource(path),Resource(self.originals[path])
+            for obj in range(2,len(old.chunks)+1):
+                self.assertEqual(r.chunk(obj).data,old.chunk(obj).data,(path,obj))
+        ap = self.resource(NATIVE_AP_LAYER)
+        for entity,component in [(21,22),(23,24)]:
+            self.assertEqual(path_world_points(ap,entity,component),path_world_points(ap,17,18))
+        trigger = self.resource(NATIVE_TRIGGER_LAYER)
+        for component in [15,17]:
+            for key in ['localPoints','worldPoints','boundingBox']:
+                self.assertEqual(trigger.prop(component,key).data,trigger.prop(9,key).data)
+
+    def test_dual_community_phases_target_only_the_dual_layer_and_guest_bed(self):
+        for path in [TRISS_HOME,YEN_HOME]:
+            r = self.resource(path)
+            rows = inline_array(r.prop(1,'storyPhaseTimetable').data)
+            native_rows = {r.names[int.from_bytes(field(r,row,'name').data,'little')]:row
+                           for row in rows if r.names[int.from_bytes(field(r,row,'name').data,'little')] in DUAL_PHASES}
+            dual_rows = {r.names[int.from_bytes(field(r,row,'name').data,'little')]:row
+                         for row in rows if r.names[int.from_bytes(field(r,row,'name').data,'little')] in DUAL_PHASES.values()}
+            self.assertEqual(set(dual_rows),set(DUAL_PHASES.values()))
+            native_layer = next(name for name in r.names if 'geralt_house' in name and ';' in name)
+            dual_layer = next(name for name in r.names if 'dual_manor' in name and ';' in name)
+            native_id = struct.pack('<H',r.names.index(native_layer))
+            dual_id = struct.pack('<H',r.names.index(dual_layer))
+            for phase,row in dual_rows.items():
+                raw = encode_properties(row)
+                # Match the complete CName field header, rather than arbitrary
+                # two-byte sequences inside a serialized timetable.
+                header = struct.pack('<HHI',r.names.index('layerName'),r.names.index('CName'),6)
+                self.assertIn(header+dual_id,raw)
+                self.assertNotIn(header+native_id,raw)
+            native_cycle = encode_properties(native_rows['q705_cycle'])
+            dual_cycle = encode_properties(dual_rows[DUAL_PHASES['q705_cycle']])
+            header = struct.pack('<HHI',r.names.index('apTags'),r.names.index('TagList'),7)+b'\1'
+            self.assertIn(header+struct.pack('<H',r.names.index('q705_ap_sleep_sorceress')),native_cycle)
+            expected = 'q705_ap_sleep_guest' if path == TRISS_HOME else 'q705_ap_sleep_sorceress'
+            self.assertIn(header+struct.pack('<H',r.names.index(expected)),dual_cycle)
+
+    def test_manor_layout_selection_is_gated_by_both_romances_on_entry_and_reload(self):
+        def layer_names(data):
+            count = struct.unpack_from('<I',data)[0]
+            pos,result = 4,[]
+            for _ in range(count):
+                length,start = read_vlq(data,pos)
+                self.assertLessEqual(length,0)
+                pos = start-length
+                result.append(data[start:pos].decode('utf-8'))
+            self.assertEqual(pos,len(data))
+            return result
+        for path,start,stop in [(HOUSE,16,20),(BOB_FIX,440,439)]:
+            r = self.resource(path)
+            for triss,yen in [(False,False),(True,False),(False,True),(True,True)]:
+                with self.subTest(path=path,triss=triss,yen=yen):
+                    facts=romance(triss,yen)|{'q705_triss_house_met':1,'q705_yen_first_met':1}
+                    walked = walk_quest(r,start,facts,{stop})
+                    state = {}
+                    for obj in walked:
+                        if r.kind(obj) != 'CQuestLayersHiderBlock':
+                            continue
+                        props = {r.names[p.name]:p.data for p in r.props(obj)}
+                        shown = layer_names(props['layersToShow']) if 'layersToShow' in props else []
+                        hidden = layer_names(props['layersToHide']) if 'layersToHide' in props else []
+                        if DUAL_GROUP in shown+hidden:
+                            self.assertEqual(props['syncOperation'],b'\1')
+                        state.update({name:True for name in shown})
+                        state.update({name:False for name in hidden})
+                    if path==HOUSE and not(triss and yen):
+                        self.assertFalse(state.get(DUAL_GROUP,False))
+                        continue
+                    self.assertEqual(state.get(DUAL_GROUP),triss and yen)
+                    for group in NATIVE_SPATIAL_GROUPS:
+                        self.assertEqual(state.get(group),not(triss and yen))
+                    if triss and yen:
+                        self.assertFalse(state[NATIVE_DECO_GROUP])
+
+    def test_reload_reselects_native_or_dual_community_phases_for_existing_saves(self):
+        r = self.resource(BOB_FIX)
+        for triss,yen in [(False,False),(True,False),(False,True),(True,True)]:
+            facts=romance(triss,yen)|{'q705_triss_house_met':1,'q705_yen_first_met':1}
+            path = walk_quest(r,440,facts,{439})
+            phases = {}
+            for block in path:
+                for obj,c in enumerate(r.chunks,1):
+                    if c.parent != block or r.kind(obj) != 'CActivateStoryPhase':
+                        continue
+                    index = int.from_bytes(r.prop(obj,'spawnset').data,'little')-1
+                    offset,kind,flags = struct.unpack_from('<IHH',r.table_data[2],index*8)
+                    self.assertEqual((r.names[kind],flags),('CCommunity',4))
+                    strings = r.table_data[0]
+                    depot = strings[offset:strings.index(b'\0',offset)].decode('utf-8')
+                    phases[depot] = r.names[integer(r,obj,'phase')]
+            expected_phase = DUAL_PHASES['q705_cycle'] if triss and yen else 'q705_cycle'
+            self.assertEqual(phases,{actor:expected_phase for actor,enabled in [(TRISS_HOME,triss),(YEN_HOME,yen)] if enabled})
+
+    def test_dual_world_group_is_registered_hidden_and_preserves_other_world_data(self):
+        r,old = self.resource(WORLD),Resource(self.originals[WORLD])
+        group = next(i for i in range(1,len(r.chunks)+1) if r.kind(i)=='CLayerGroup'
+                     and read_ws_string(r.prop(i,'name').data)=='dual_manor')
+        self.assertEqual(r.prop(group,'isVisibleOnStart').data,b'\0')
+        world,parent,children,infos = group_tail(r,group)
+        self.assertEqual((world,children,len(infos)),(1,[],4))
+        before = group_tail(old,parent)
+        after = group_tail(r,parent)
+        self.assertEqual(after,(before[0],before[1],before[2]+[group],before[3]))
+        paths = set()
+        for obj in infos:
+            paths.add(read_ws_string(r.prop(obj,'depotFilePath').data))
+            _,end = read_properties(r.chunk(obj).data,1)
+            self.assertEqual(r.chunk(obj).data[end:],struct.pack('<I',group))
+        self.assertEqual(paths,set(DUAL_LAYER_SOURCES))
+        for obj in range(1,len(old.chunks)+1):
+            if obj != parent:
+                self.assertEqual(r.chunk(obj).data,old.chunk(obj).data,obj)
+
+    def test_existing_save_migration_replaces_the_native_terminal_pause(self):
+        r,old = self.resource(BOB_FIX),Resource(self.originals[BOB_FIX])
+        self.assertEqual(old.kind(10),'CQuestPauseConditionBlock')
+        self.assertEqual(r.kind(10),'CQuestDeletionMarkerBlock')
+        guid = old.prop(10,'guid').data
+        marker_guids=r.prop(10,'guids').data
+        self.assertEqual(struct.unpack_from('<I',marker_guids)[0],2)
+        self.assertIn(guid,[marker_guids[4:20],marker_guids[20:36]])
+        self.assertFalse(any(p.data==guid for i in range(1,len(r.chunks)+1) for p in r.props(i)
+                             if r.names[p.name]=='guid'))
+        targets = r.connections(10)[0][1]
+        self.assertEqual(len(targets),2)
+        stub = next(obj for obj,_ in targets if r.kind(obj)=='CQuestPauseConditionBlock')
+        self.assertEqual(read_ws_string(r.prop(stub,'name').data),read_ws_string(old.prop(10,'name').data))
+        entered = next(obj for obj,_ in targets if r.kind(obj)=='CQuestFactsDBChangingBlock')
+        self.assertEqual(read_ws_string(r.prop(entered,'factID').data),'dr_manor_layout_split_v2')
+        phase = r.connections(entered)[0][1][0][0]
+        self.assertEqual(r.kind(phase),'CQuestPhaseBlock')
+        graph = integer(r,phase,'embeddedGraph')
+        start = next(i for i,c in enumerate(r.chunks,1) if c.parent==graph and r.kind(i)=='CQuestPhaseInputBlock')
+        end = next(i for i,c in enumerate(r.chunks,1) if c.parent==graph and r.kind(i)=='CQuestPhaseOutputBlock')
+        for triss,yen in [(False,False),(True,False),(False,True),(True,True)]:
+            facts=romance(triss,yen)|{'q705_triss_house_met':1,'q705_yen_first_met':1}
+            path = walk_quest(r,start,facts,{end})
+            self.assertIn(end,path)
+            self.assertTrue(all(r.chunk(obj).parent==graph for obj in path))
+            actions = [obj for obj in path if r.kind(obj)=='CQuestStoryPhaseSetterBlock']
+            self.assertEqual(len(actions),int(triss or yen))
+
+    def test_manor_migration_waits_for_the_corresponding_welcome_before_residency(self):
+        r=self.resource(BOB_FIX)
+        for triss,yen in [(False,False),(True,False),(False,True),(True,True)]:
+            for triss_met,yen_met in [(0,0),(1,0),(0,1),(1,1)]:
+                with self.subTest(triss=triss,yen=yen,triss_met=triss_met,yen_met=yen_met):
+                    facts=romance(triss,yen)|{'q705_triss_house_met':triss_met,'q705_yen_first_met':yen_met,
+                                              'q705_completed':1,'witcher3_game_finished':1}
+                    path=walk_quest(r,440,facts,{439})
+                    spawns=[obj for obj in path if r.kind(obj)=='CQuestStoryPhaseSetterBlock']
+                    ready=(triss_met and yen_met) if triss and yen else triss_met if triss else yen_met if yen else False
+                    self.assertEqual(len(spawns),int(bool(ready)))
+                    shown=[obj for obj in path if any(r.names[p.name]=='layersToShow' and DUAL_GROUP.encode() in p.data for p in r.props(obj))]
+                    self.assertEqual(bool(shown),bool(triss and yen and triss_met and yen_met))
+
+    def test_welcomes_keep_native_layers_and_spawn_phases_until_the_offscreen_residency_transition(self):
+        r,old=self.resource(HOUSE),Resource(self.originals[HOUSE])
+        self.assertEqual(r.connections(199),[('Out',[(200,'Input')])])
+        self.assertEqual(r.prop(199,'layersToShow').data,old.prop(199,'layersToShow').data)
+        self.assertEqual(r.prop(199,'layersToHide').data,struct.pack('<I',1)+__import__('redio').ws_string(DUAL_GROUP))
+        for triss,yen in [(True,True),(True,False),(False,True)]:
+            path=walk_quest(r,214,romance(triss,yen),{5})
+            actions=[i for block in path for i,c in enumerate(r.chunks,1)
+                     if c.parent==block and r.kind(i)=='CActivateStoryPhase']
+            self.assertEqual(len(actions),int(triss)+int(yen))
+            self.assertEqual([r.names[integer(r,i,'phase')] for i in actions],['q705_house']*len(actions))
+            self.assertFalse(any(DUAL_GROUP.encode() in p.data for obj in path for p in r.props(obj)
+                                 if r.names[p.name] in ['layersToShow','layersToHide']))
+        path=walk_quest(r,16,romance(True,True),{20})
+        wait=next(obj for obj in path if r.kind(obj)=='CQuestPauseConditionBlock')
+        layout=next(obj for obj in path if any(r.names[p.name]=='layersToShow' and DUAL_GROUP.encode() in p.data for p in r.props(obj)))
+        spawn=next(obj for obj in path if r.kind(obj)=='CQuestStoryPhaseSetterBlock')
+        self.assertLess(path.index(wait),path.index(layout))
+        self.assertLess(path.index(layout),path.index(spawn))
+
+    def test_derived_layers_have_distinct_guids_and_consistent_path_hashes(self):
+        metadata = Metadata((self.output/'Mods/modDualRomanceNoTango/content/metadata.store').read_bytes())
+        for path in DUAL_LAYER_SOURCES:
+            r,old = self.resource(path),Resource(self.originals[path])
+            def guids(resource):
+                return [p.data for obj in range(1,len(resource.chunks)+1) for p in resource.props(obj)
+                        if resource.names[p.kind]=='CGUID']
+            ids = guids(r)
+            self.assertEqual(len(ids),len(set(ids)))
+            self.assertFalse(set(ids)&set(guids(old)))
+            fid = metadata.by_path[path]
+            self.assertEqual(metadata.hashes[fid]&0xffffffffffffffff,fnv64_path(path))
+        native = Metadata((self.game/'content/metadata.store').read_bytes())
+        for path in [WORLD,HOUSE,TRISS_HOME]:
+            self.assertEqual(native.hashes[native.by_path[path]]&0xffffffffffffffff,fnv64_path(path))
 
     def test_romance_fact_mutations_are_unchanged(self):
         # No cheat that periodically erases/re-adds a romance, no automatic
