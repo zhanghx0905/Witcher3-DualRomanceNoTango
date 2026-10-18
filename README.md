@@ -16,7 +16,8 @@
 
 <p>
   <a href="docs/292030_4.jpg"><img src="docs/292030_4.jpg" alt="女皇结局酒馆中三人同桌" width="360"></a>
-  <a href="docs/292030_8.jpg"><img src="docs/292030_8.jpg" alt="白鸦庄园中两人的独立躺椅" width="360"></a>
+  <a href="docs/292030_8.jpg"><img src="docs/292030_13.jpg" alt="白鸦庄园中两人的独立躺椅" width="360"></a>
+    <a href="docs/292030_8.jpg"><img src="docs/292030_15.jpg" alt="白鸦庄园中两人的独立躺椅" width="360"></a>
 </p>
 
 ## 设计
