@@ -314,7 +314,7 @@ def build(game, destination):
     for path, raw in resources.items():
         assert packed_catalog.extract(path) == raw
         assert path in packed_metadata.by_path
-    report = dict(name='Dual Romance / No Tango', version='0.1.8-experimental',
+    report = dict(name='Dual Romance / No Tango', version='0.1.10-experimental',
                   target='Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7',
                   runtime_validated=False, resources=manifest, changes=notes,
                   support_resources=[dict(path=path, sha256=hashlib.sha256(data).hexdigest()) for path,data in support_resources.items()],

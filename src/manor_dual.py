@@ -94,7 +94,7 @@ def rekey_layer(r,path):
     for obj in range(1,len(r.chunks)+1):
         for p in r.props(obj):
             if r.names[p.kind] == 'CGUID':
-                key = path+'/'+str(obj)+'/'+r.names[p.name]+'/'+p.data.hex()
+                key = 'tree-clearing-v2/'+path+'/'+str(obj)+'/'+r.names[p.name]+'/'+p.data.hex()
                 r.set(obj,r.names[p.name],uuid.uuid5(uuid.NAMESPACE_URL,key).bytes_le)
 
 
@@ -270,14 +270,14 @@ def add_saved_quest_migration(r,notes):
     """
     old_pause_guid = r.prop(10,'guid').data
     previous_stub_guids=[uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v'+str(version)+'-migration-stub/'+old_pause_guid.hex()).bytes_le
-                         for version in [1,2]]
-    stub = r.clone_owned(10,'manor-layout-v3-migration-stub')
+                         for version in [1,2,3,4]]
+    stub = r.clone_owned(10,'manor-layout-v5-migration-stub')
     r.register(2,stub)
     owned = [437]
     for obj in owned:
         owned.extend(i for i,c in enumerate(r.chunks,1) if c.parent == obj)
     before = len(r.chunks)
-    phase = r.clone_owned(437,'manor-layout-v3-migration-phase')
+    phase = r.clone_owned(437,'manor-layout-v5-migration-phase')
     r.register(2,phase)
     mapping = {old:before+index+1 for index,old in enumerate(owned)}
     for old,new in mapping.items():
@@ -285,15 +285,15 @@ def add_saved_quest_migration(r,notes):
             r.set_connections(new,[(socket,[(mapping.get(target,target),input_name) for target,input_name in targets])
                                    for socket,targets in r.connections(old)])
     r.set(phase,'name',ws_string('Romance-specific manor layout compatibility'))
-    entered = r.clone_owned(477,'manor-layout-v3-migration-entered')
+    entered = r.clone_owned(477,'manor-layout-v5-migration-entered')
     r.register(2,entered)
     r.set(entered,'name',ws_string('Dual manor compatibility entry'))
-    r.set(entered,'factID',ws_string('dr_manor_layout_split_v3'))
+    r.set(entered,'factID',ws_string('dr_manor_layout_split_v5'))
     set_property(r,entered,'setExactValue','Bool',b'\1')
     r.route(entered,'Out',[(phase,'In')])
     r.chunks[9] = copy.deepcopy(r.chunk(9))
-    r.set(10,'guid',uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v3-marker').bytes_le)
-    r.set(10,'guids',u32(3)+old_pause_guid+b''.join(previous_stub_guids))
+    r.set(10,'guid',uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v5-marker').bytes_le)
+    r.set(10,'guids',u32(5)+old_pause_guid+b''.join(previous_stub_guids))
     r.set_connections(10,[('Out',[(entered,'In'),(stub,'In')])])
     notes.append('Existing-save migration: native terminal-pause deletion marker starts a fresh gated manor fix, including already-completed q705 saves.')
 

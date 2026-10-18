@@ -4,8 +4,8 @@
 
 The second furniture set uses ordinary streamed CStaticMeshComponents, following
 the native mq7024 bed's entity/component serialization. It deliberately does not
-reuse baked sector occlusion IDs from Yen's furniture. Path curves retain native
-outdoor segments and the existing guest-room staircase approach.
+reuse baked sector occlusion IDs from Yen's furniture. The tree-side route joins
+Ciri's native downhill path and the existing guest-room staircase approach.
 """
 from __future__ import annotations
 
@@ -23,10 +23,20 @@ DECO_LAYER = r'dlc\bob\data\levels\bob\locations\vineyards\east\corvo_bianco\q70
 BED_TEMPLATE = r'dlc\bob\data\quests\minor_quests\quest_files\mq7024_home\entities\mq7024_witcher_bed_rich_collision.w2ent'
 TRISS_PATH = 'q705_path_triss_from_own_chair'
 TRISS_TRIGGER = 'q705_tr_triss_own_chair'
-# Northwest of Yen, away from the native rhododendron bed. Terrain + native
-# rock render samples span 6.53 cm across the approximate chair footprint.
-# Foliage exclusion is checked independently; runtime QA is still required.
-OFFSET = (-4.0, 1.0, -0.017419446013150264)
+# Clearing on the scenic east side of Ciri's chestnut tree. The furniture has
+# about 22 cm of terrain/render-surface variation at this orientation. Actual
+# collision, actor feet and navigation still require an in-game check.
+CHAIR_ORIGIN = (-382.99310302734375, -775.383544921875, 35.19615173339844)
+CHAIR_TARGET = (-403.5, -828.0, 45.13963080609408)
+LAYOUT_YAW = 195.0
+TREE_APPROACH = [(-405.31390380859375, -830.1258544921875, 45.260596469044685)]
+
+
+def relocate_point(point):
+    x,y,z = (a-b for a,b in zip(point,CHAIR_ORIGIN))
+    angle = math.radians(LAYOUT_YAW)
+    cs,sn = math.cos(angle),math.sin(angle)
+    return (CHAIR_TARGET[0]+cs*x-sn*y,CHAIR_TARGET[1]+sn*x+cs*y,CHAIR_TARGET[2]+z)
 
 
 def fields(resource, raw):
@@ -54,11 +64,14 @@ def encode_array(items):
     return u32(len(items)) + b''.join(b'\0' + encode_properties(props) for props in items)
 
 
-def shift_transform(raw, delta=OFFSET):
+def shift_transform(raw):
     assert raw[0] & 1
     result = bytearray(raw)
     position = struct.unpack_from('<3f', raw, 1)
-    struct.pack_into('<3f', result, 1, *(a + b for a, b in zip(position, delta)))
+    struct.pack_into('<3f', result, 1, *relocate_point(position))
+    assert raw[0] & 2
+    yaw = struct.unpack_from('<f',raw,21)[0]
+    struct.pack_into('<f',result,21,(yaw+LAYOUT_YAW)%360)
     return bytes(result)
 
 
@@ -98,8 +111,7 @@ def patch_actionpoints(resource, notes):
     resource.set(15, 'transform', shift_transform(resource.prop(15, 'transform').data))
     ciri = path_world_points(resource, 11, 12)
     sorceress = path_world_points(resource, 17, 18)
-    points = [tuple(a + b for a, b in zip(sorceress[0], OFFSET))] + sorceress[:17] + ciri[25:]
-    assert math.dist(sorceress[16], ciri[25]) < 3.0
+    points = [relocate_point(sorceress[0])] + TREE_APPROACH + ciri[1:]
 
     entity = resource.clone_owned(11, 'triss-own-chair-path')
     component = next(i for i, chunk in enumerate(resource.chunks, 1)
@@ -141,7 +153,7 @@ def patch_actionpoints(resource, notes):
     field(resource, curve, 'curves').data = encode_array(axes)
     resource.set(component, 'curve', b'\0' + encode_properties(curve))
     append_entity(resource, entity)
-    notes.append('Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.')
+    notes.append('Triss: chair actionpoint moves to the chestnut-tree clearing; approach bypasses the trunk and follows Ciri native downhill route and guest-room stairs.')
 
 
 def patch_anchors(resource, notes):
@@ -149,14 +161,6 @@ def patch_anchors(resource, notes):
     # the default Triss dialogset anchor; her front-door intro anchor stays put.
     resource.set(16, 'transform', shift_transform(resource.prop(16, 'transform').data))
     notes.append('Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.')
-
-
-def shift_vector(resource, raw):
-    props = fields(resource, raw)
-    for name, offset in zip(['X', 'Y', 'Z'], OFFSET):
-        prop = field(resource, props, name)
-        prop.data = struct.pack('<f', struct.unpack('<f', prop.data)[0] + offset)
-    return b'\0' + encode_properties(props)
 
 
 def patch_triggers(resource, notes):
@@ -173,18 +177,25 @@ def patch_triggers(resource, notes):
     resource.set(entity, 'tags', b'\x01' + struct.pack('<H', resource.name_id(TRISS_TRIGGER)))
     resource.set(entity, 'transform', shift_transform(resource.prop(entity, 'transform').data))
     box = fields(resource, resource.prop(component, 'boundingBox').data)
-    for prop in box:
-        assert resource.names[prop.kind] == 'Vector'
-        prop.data = shift_vector(resource, prop.data)
+    minimum,maximum = [[struct.unpack('<f',field(resource,fields(resource,p.data),axis).data)[0]
+                        for axis in ['X','Y','Z']] for p in box]
+    corners = [relocate_point((x,y,z)) for x in [minimum[0],maximum[0]]
+               for y in [minimum[1],maximum[1]] for z in [minimum[2],maximum[2]]]
+    for prop,operation in zip(box,[min,max]):
+        values = fields(resource,prop.data)
+        for index,axis in enumerate(['X','Y','Z']):
+            field(resource,values,axis).data = struct.pack('<f',operation(p[index] for p in corners))
+        prop.data = b'\0'+encode_properties(values)
     resource.set(component, 'boundingBox', b'\0' + encode_properties(box))
     points = inline_array(resource.prop(component, 'worldPoints').data)
     for props in points:
-        for name, offset in zip(['X', 'Y', 'Z'], OFFSET):
+        position = [struct.unpack('<f',field(resource,props,key).data)[0] for key in ['X','Y','Z']]
+        for name, value in zip(['X', 'Y', 'Z'], relocate_point(position)):
             prop = field(resource, props, name)
-            prop.data = struct.pack('<f', struct.unpack('<f', prop.data)[0] + offset)
+            prop.data = struct.pack('<f',value)
     resource.set(component, 'worldPoints', encode_array(points))
     append_entity(resource, entity)
-    notes.append('Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.')
+    notes.append('Triss dialogue availability: independently rotated and relocated trigger, including recomputed world polygon and axis-aligned bounds; Yen trigger unchanged.')
 
 
 def sector_objects(resource):
@@ -206,8 +217,8 @@ def matrix_transform(matrix, position):
     roll = math.atan2(matrix[5] / scale[1], matrix[8] / scale[2])
     pitch = math.asin(max(-1, min(1, -matrix[2] / scale[0])))
     yaw = math.atan2(matrix[1] / scale[0], matrix[0] / scale[0])
-    return b'\x07' + struct.pack('<9f', *(a + b for a, b in zip(position, OFFSET)),
-                                *map(math.degrees, [roll, pitch, yaw]), *scale)
+    return b'\x07' + struct.pack('<9f', *relocate_point(position),
+                                math.degrees(roll),math.degrees(pitch),(math.degrees(yaw)+LAYOUT_YAW)%360, *scale)
 
 
 def patch_decor(resource, notes, template_bytes, metadata):

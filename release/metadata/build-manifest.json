@@ -1,6 +1,6 @@
 {
   "name": "Dual Romance / No Tango",
-  "version": "0.1.8-experimental",
+  "version": "0.1.10-experimental",
   "target": "Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7",
   "runtime_validated": false,
   "resources": [
@@ -58,9 +58,9 @@
       "path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
       "source_path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
       "source_sha256": "cf9b7e4cc2d7af948027c6414e3496a7b843564925b1f63d714105b573f23aaf",
-      "patched_sha256": "3d95fe93465da2711d16b966002d423d3c1e38210a4018405efc0614e17711bc",
+      "patched_sha256": "1aa33bb349195ee5c98f9473a5b9313e78d98b897be7aa26303c6eacaec77fca",
       "source_bytes": 89495,
-      "patched_bytes": 102038,
+      "patched_bytes": 102070,
       "source_objects": 645,
       "patched_objects": 728
     },
@@ -148,9 +148,9 @@
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\guests.w2l",
       "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\actionpoints\\guests.w2l",
       "source_sha256": "9421569ba83cba34205cf3ae74267c5a6b77b7225c5e925059010957fea4b14b",
-      "patched_sha256": "3d790bc082b22a152c6776046091e3aef0e4da5d51d56b016d3c9770ff16b2c4",
+      "patched_sha256": "097e5c5ea355fb18e38edc83958cbc577f7ae751ac244e6686880315d8ac42de",
       "source_bytes": 24497,
-      "patched_bytes": 43964,
+      "patched_bytes": 49052,
       "source_objects": 20,
       "patched_objects": 24
     },
@@ -158,7 +158,7 @@
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\dialogsets.w2l",
       "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l",
       "source_sha256": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
-      "patched_sha256": "6b7187347542767468515c2bdf8d667d75a00b23458ec17924092cf89273d300",
+      "patched_sha256": "113365f1dfeec57747576fc83202aca4259706d57020e8a0bc15a930ecee57b8",
       "source_bytes": 2801,
       "patched_bytes": 2801,
       "source_objects": 19,
@@ -168,7 +168,7 @@
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\triggers.w2l",
       "source_path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l",
       "source_sha256": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
-      "patched_sha256": "5305d708a2dde6a91f93d5f0fded7c8471b15369579b3381702f2f810dd5fcc6",
+      "patched_sha256": "ccdb45d51fe4a45e5a87a4f56a792fb79507072e69a8314eb231943ef31a2b94",
       "source_bytes": 13950,
       "patched_bytes": 18195,
       "source_objects": 13,
@@ -178,7 +178,7 @@
       "path": "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\dual_manor\\decor.w2l",
       "source_path": "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l",
       "source_sha256": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
-      "patched_sha256": "3a2eb8346e60f0d061ae28c033493a255b5496778a1a330899b67686a2b0b4d9",
+      "patched_sha256": "f27bd0fdf94d26e694465a6ec18bcd4c69a3e8e1253f83e381b59fb819ebb87a",
       "source_bytes": 2203,
       "patched_bytes": 8094,
       "source_objects": 3,
@@ -204,9 +204,9 @@
     "Q504 opening: dual-only input/dialogset with Geralt, Yen and Triss at the same table; native Yen lines retained; one dedicated three-person overview replaces the two-person shot. Single-romance inputs/timelines remain native.",
     "Manor: hidden dual-only world layer group; native spatial/furniture layers remain retail for single romances.",
     "Manor yen: native welcomes and single-romance phases retained; dual post-welcome resting and daily phases select the dual layout.",
-    "Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.",
+    "Triss: chair actionpoint moves to the chestnut-tree clearing; approach bypasses the trunk and follows Ciri native downhill route and guest-room stairs.",
     "Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.",
-    "Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.",
+    "Triss dialogue availability: independently rotated and relocated trigger, including recomputed world polygon and axis-aligned bounds; Yen trigger unchanged.",
     "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched."
   ],
   "support_resources": [
@@ -223,6 +223,6 @@
       "sha256": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
     }
   ],
-  "bundle_sha256": "0fcde2b397b12119859f6c9ecf32d5bcc8cb41e44889478aef34eb49bf00e5ef",
-  "metadata_sha256": "4f701d03ddaf2886c76a4c6a285ae3f004146dd749cecc177d24e3e7e835f244"
+  "bundle_sha256": "f7768a13e0fd12d4c282d583d3191b5646170323922b5142b53f7770630e51db",
+  "metadata_sha256": "b6e129bf73b29ca6086670545518a936e165a4d15acb2703fd75e53ef776095e"
 }

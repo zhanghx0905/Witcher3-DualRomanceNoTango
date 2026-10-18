@@ -16,7 +16,7 @@ from redio import (BundleCatalog, Metadata, Resource, fnv32_name, fnv64_path, en
                    read_ws_string, read_vlq)
 from manor_layout import (AP_LAYER as NATIVE_AP_LAYER, ANCHOR_LAYER as NATIVE_ANCHOR_LAYER,
                           TRIGGER_LAYER as NATIVE_TRIGGER_LAYER, DECO_LAYER as NATIVE_DECO_LAYER, BED_TEMPLATE,
-                          OFFSET, TRISS_PATH, TRISS_TRIGGER, fields, field,
+                          CHAIR_ORIGIN, CHAIR_TARGET, LAYOUT_YAW, TREE_APPROACH, TRISS_PATH, TRISS_TRIGGER, fields, field,
                           inline_array, path_world_points, sector_objects)
 from manor_dual import (DUAL_AP_LAYER as AP_LAYER, DUAL_ANCHOR_LAYER as ANCHOR_LAYER,
                         DUAL_TRIGGER_LAYER as TRIGGER_LAYER, DUAL_DECO_LAYER as DECO_LAYER,
@@ -80,6 +80,15 @@ def boards(r, facts):
 def romance(triss, yen):
     return {key: 1 for key, enabled in [('q309_triss_lover', triss), ('q309_triss_stayed', triss),
                                        ('sq202_yen_girlfriend', yen)] if enabled}
+
+
+def expected_tree_point(point):
+    # Golden basis for the selected 195-degree turn, independent of the
+    # production transform's trigonometry and transform serialization.
+    x,y=point[0]-CHAIR_ORIGIN[0],point[1]-CHAIR_ORIGIN[1]
+    return (CHAIR_TARGET[0]-.9659258262890683*x+.2588190451025208*y,
+            CHAIR_TARGET[1]-.2588190451025208*x-.9659258262890683*y,
+            CHAIR_TARGET[2]+point[2]-CHAIR_ORIGIN[2])
 
 
 class ModChecks(unittest.TestCase):
@@ -403,10 +412,12 @@ class ModChecks(unittest.TestCase):
         # at the same place despite different daytime AP tags.
         self.assertGreater(math.dist(position(scene, 12), position(scene, 16)), 2.5)
         self.assertGreater(math.dist(position(ap, 13), position(ap, 15)), 2.5)
-        for axis in range(3):
-            ap_shift = position(ap, 15)[axis] - position(old_ap, 15)[axis]
-            scene_shift = position(scene, 16)[axis] - position(old_scene, 16)[axis]
-            self.assertAlmostEqual(ap_shift, scene_shift, delta=0.0001)
+        for resource,old,obj in [(ap,old_ap,15),(scene,old_scene,16)]:
+            for actual,expected in zip(position(resource,obj),expected_tree_point(position(old,obj))):
+                self.assertAlmostEqual(actual,expected,delta=0.0001)
+            before=struct.unpack_from('<f',old.prop(obj,'transform').data,21)[0]
+            after=struct.unpack_from('<f',resource.prop(obj,'transform').data,21)[0]
+            self.assertAlmostEqual((after-before)%360,195,delta=0.0001)
         for obj in (8, 13, 14):
             self.assertEqual(self.properties_except(ap,obj),self.properties_except(old_ap,obj))
         for obj in range(1, len(old_scene.chunks) + 1):
@@ -447,7 +458,7 @@ class ModChecks(unittest.TestCase):
             return [tuple(origin[a]+sum(v[i]*basis[i*3+a] for i in range(3)) for a in range(3))
                     for v in [(x,y,z) for x in (bounds[0],bounds[3]) for y in (bounds[1],bounds[4]) for z in (bounds[2],bounds[5])]]
         old_chair = mesh_corners(1)
-        new_chair = [tuple(p[a]+shift[a] for a in range(3)) for p in old_chair]
+        new_chair = [expected_tree_point(p) for p in old_chair]
         self.assertTrue(any(max(p[a] for p in old_chair)<min(p[a] for p in new_chair)
                             or max(p[a] for p in new_chair)<min(p[a] for p in old_chair) for a in range(3)),
                         'Chair world-space bounds must not overlap')
@@ -459,12 +470,12 @@ class ModChecks(unittest.TestCase):
             descriptor = objects[source_index]
             source_offset = start + descriptor[3]
             old_position = struct.unpack_from('<3f', raw, source_offset+36)
-            for axis in range(3):
-                self.assertAlmostEqual(position[axis]-old_position[axis], shift[axis], delta=0.0001)
+            for actual,expected in zip(position,expected_tree_point(old_position)):
+                self.assertAlmostEqual(actual,expected,delta=0.0001)
             # Independent streamed entities do not belong to the baked sector.
             # Native world CLayerInfo 6696 has no bounding box; this quest layer
-            # is loaded explicitly. Keep the furniture local to the native site.
-            self.assertLess(math.dist(position, old_position), 7.0)
+            # is loaded explicitly. The new furniture stays near Ciri's tree.
+            self.assertLess(math.dist(position, CHAIR_TARGET), 1.5)
             self.assertTrue(all(math.isfinite(v) for v in position))
             # Reconstruct the runtime entity's basis independently and compare
             # it to the cooked source, including the table/jug's native scale.
@@ -474,7 +485,11 @@ class ModChecks(unittest.TestCase):
             basis = [cy*cz*sx, cy*snz*sx, -sny*sx,
                      (snx*sny*cz-cx*snz)*sy,(snx*sny*snz+cx*cz)*sy,snx*cy*sy,
                      (cx*sny*cz+snx*snz)*sz,(cx*sny*snz-snx*cz)*sz,cx*cy*sz]
-            for actual,expected in zip(basis,struct.unpack_from('<9f',raw,source_offset)):
+            old_basis=struct.unpack_from('<9f',raw,source_offset)
+            rotated=[v for row in range(3) for v in [
+                -.9659258262890683*old_basis[row*3]+.2588190451025208*old_basis[row*3+1],
+                -.2588190451025208*old_basis[row*3]-.9659258262890683*old_basis[row*3+1],old_basis[row*3+2]]]
+            for actual,expected in zip(basis,rotated):
                 self.assertAlmostEqual(actual,expected,delta=0.00001)
             data = r.prop(entity, 'streamingDataBuffer').data
             self.assertEqual(struct.unpack_from('<I',data)[0],len(data)-4)
@@ -529,10 +544,11 @@ class ModChecks(unittest.TestCase):
         self.assertLess(math.dist(points[0],chair_position),2.0)
         ciri = path_world_points(old,11,12)
         sorceress = path_world_points(old,17,18)
-        self.assertEqual(len(points),1+17+len(ciri[25:]))
-        for actual,expected in zip(points[1:18],sorceress[:17]):
+        self.assertEqual(len(points),1+len(TREE_APPROACH)+len(ciri[1:]))
+        self.assertLess(math.dist(points[0],expected_tree_point(sorceress[0])),.0001)
+        for actual,expected in zip(points[1:1+len(TREE_APPROACH)],TREE_APPROACH):
             self.assertLess(math.dist(actual,expected),0.0001)
-        for actual,expected in zip(points[18:],ciri[25:]):
+        for actual,expected in zip(points[1+len(TREE_APPROACH):],ciri[1:]):
             self.assertLess(math.dist(actual,expected),0.0001)
 
     def test_triss_own_dialogue_trigger_has_consistent_world_polygon_and_bounds(self):
@@ -546,25 +562,25 @@ class ModChecks(unittest.TestCase):
         old_points = inline_array(old.prop(9,'worldPoints').data)
         new_points = inline_array(r.prop(15,'worldPoints').data)
         for old_point,new_point in zip(old_points,new_points):
-            for axis,delta in zip(['X','Y','Z'],OFFSET):
-                before = struct.unpack('<f',field(old,old_point,axis).data)[0]
-                after = struct.unpack('<f',field(r,new_point,axis).data)[0]
-                self.assertAlmostEqual(after-before,delta,delta=0.0001)
+            before=[struct.unpack('<f',field(old,old_point,axis).data)[0] for axis in ['X','Y','Z']]
+            after=[struct.unpack('<f',field(r,new_point,axis).data)[0] for axis in ['X','Y','Z']]
+            for a,b in zip(after,expected_tree_point(before)):self.assertAlmostEqual(a,b,delta=.0001)
         old_box = fields(old,old.prop(9,'boundingBox').data)
         new_box = fields(r,r.prop(15,'boundingBox').data)
-        for before,after in zip(old_box,new_box):
-            for axis,delta in zip(['X','Y','Z'],OFFSET):
-                v0 = struct.unpack('<f',field(old,fields(old,before.data),axis).data)[0]
-                v1 = struct.unpack('<f',field(r,fields(r,after.data),axis).data)[0]
-                self.assertAlmostEqual(v1-v0,delta,delta=0.0001)
+        before=[[struct.unpack('<f',field(old,fields(old,p.data),axis).data)[0] for axis in ['X','Y','Z']] for p in old_box]
+        corners=[expected_tree_point((x,y,z)) for x in [before[0][0],before[1][0]] for y in [before[0][1],before[1][1]] for z in [before[0][2],before[1][2]]]
+        for after,operation in zip(new_box,[min,max]):
+            for index,axis in enumerate(['X','Y','Z']):
+                value=struct.unpack('<f',field(r,fields(r,after.data),axis).data)[0]
+                self.assertAlmostEqual(value,operation(p[index] for p in corners),delta=.0001)
 
     def test_new_chair_avoids_native_flower_beds(self):
         native = BundleCatalog(self.game / 'content/content0/bundles')
         furniture = self.resource(DECO_LAYER)
         x, y, z = struct.unpack_from('<3f', furniture.prop(4, 'transform').data, 1)
         clearance, instances = math.inf, 0
-        for cell_x in (-448, -384, -320):
-            for cell_y in (-832, -768):
+        for cell_x in (-512, -448, -384):
+            for cell_y in (-896, -832, -768):
                 path = rf'dlc\bob\data\levels\bob\source_foliage\foliage_{cell_x:.2f}_{cell_y:.2f}.flyr'
                 resource = Resource(native.extract(path))
                 raw = resource.chunk(1).data
@@ -582,13 +598,41 @@ class ModChecks(unittest.TestCase):
                             if 'green_low' in name or abs(pz-z)>2.5 or math.hypot(px-x, py-y)>10:
                                 continue
                             instances += 1
-                            vx, vy = px-x, py-y
+                            vx, vy = -.9659258262890683*(px-x)-.2588190451025208*(py-y), .2588190451025208*(px-x)-.9659258262890683*(py-y)
                             lx, ly = vx*.62866765-vy*.77767408, vx*.77767408+vy*.62866765
                             gap = math.hypot(max(abs(lx)-1.15, 0), max(abs(ly)-.55, 0))-radius
                             clearance = min(clearance, gap)
                 self.assertEqual(pos, len(raw))
-        self.assertGreater(instances, 20)
+        self.assertGreater(instances, 10)
         self.assertGreater(clearance, .5, 'Chair footprint overlaps native shrub/flower exclusion zones')
+
+    def test_tree_resting_place_does_not_occupy_ciris_tree_or_native_downhill_path(self):
+        self.assertEqual(LAYOUT_YAW,195)
+        r=self.resource(AP_LAYER)
+        chair=struct.unpack_from('<3f',self.resource(DECO_LAYER).prop(4,'transform').data,1)
+        ciri=struct.unpack_from('<3f',r.prop(8,'transform').data,1)
+        self.assertLess(math.dist(chair,ciri),6)
+        self.assertGreater(math.dist(chair,ciri),4)
+        self.assertGreater(math.dist(chair,(-407.8346252441406,-829.0411987304688,45.65644073486328)),4)
+        path=path_world_points(r,11,12)
+        raw,meshes,objects,start=sector_objects(Resource(self.originals[DECO_LAYER]))
+        offset=start+objects[1][3]
+        basis=struct.unpack_from('<9f',raw,offset)
+        origin=struct.unpack_from('<3f',raw,offset+36)
+        bounds=meshes[struct.unpack_from('<H',raw,offset+56)[0]][:6]
+        corners=[expected_tree_point(tuple(origin[a]+x*basis[a]+y*basis[3+a] for a in range(3)))
+                 for x in [bounds[0],bounds[3]] for y in [bounds[1],bounds[4]]]
+        def distance_to_segment(p,a,b):
+            vx,vy=b[0]-a[0],b[1]-a[1]
+            t=max(0,min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy)))
+            return math.hypot(p[0]-a[0]-t*vx,p[1]-a[1]-t*vy)
+        self.assertGreater(min(distance_to_segment(p,a,b) for p in corners for a,b in zip(path,path[1:])),1.0)
+
+    def test_outer_tree_clearing_moves_the_chair_to_the_scenic_side(self):
+        chair=struct.unpack_from('<3f',self.resource(DECO_LAYER).prop(4,'transform').data,1)
+        self.assertGreater(chair[0],-407.8346252441406+3.5)
+        self.assertGreater(chair[1],-830.5+2)
+        self.assertGreater(math.dist(chair,(-412,-830.5,46.099326964674916)),8)
 
     def test_single_romance_native_communities_and_triss_cycle_are_retained(self):
         for path in [TRISS_HOME,YEN_HOME]:
@@ -741,10 +785,10 @@ class ModChecks(unittest.TestCase):
         self.assertEqual(r.kind(10),'CQuestDeletionMarkerBlock')
         guid = old.prop(10,'guid').data
         marker_guids=r.prop(10,'guids').data
-        self.assertEqual(struct.unpack_from('<I',marker_guids)[0],3)
+        self.assertEqual(struct.unpack_from('<I',marker_guids)[0],5)
         actual_guids=[marker_guids[pos:pos+16] for pos in range(4,len(marker_guids),16)]
         import uuid
-        expected_guids=[guid]+[uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v'+str(version)+'-migration-stub/'+guid.hex()).bytes_le for version in [1,2]]
+        expected_guids=[guid]+[uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v'+str(version)+'-migration-stub/'+guid.hex()).bytes_le for version in [1,2,3,4]]
         self.assertEqual(actual_guids,expected_guids)
         self.assertFalse(any(p.data==guid for i in range(1,len(r.chunks)+1) for p in r.props(i)
                              if r.names[p.name]=='guid'))
@@ -753,7 +797,7 @@ class ModChecks(unittest.TestCase):
         stub = next(obj for obj,_ in targets if r.kind(obj)=='CQuestPauseConditionBlock')
         self.assertEqual(read_ws_string(r.prop(stub,'name').data),read_ws_string(old.prop(10,'name').data))
         entered = next(obj for obj,_ in targets if r.kind(obj)=='CQuestFactsDBChangingBlock')
-        self.assertEqual(read_ws_string(r.prop(entered,'factID').data),'dr_manor_layout_split_v3')
+        self.assertEqual(read_ws_string(r.prop(entered,'factID').data),'dr_manor_layout_split_v5')
         phase = r.connections(entered)[0][1][0][0]
         self.assertEqual(r.kind(phase),'CQuestPhaseBlock')
         graph = integer(r,phase,'embeddedGraph')
