@@ -1,4 +1,44 @@
-# 开发与版本维护
+# 安装与开发
+
+## 适用环境
+
+目标游戏为包含 Blood and Wine 的 Remastered 安装，Steam build 25773555，资源格式为 CR2W 164 / bundle 5 / metadata 7。兼容信息见 `release/metadata/compatibility.json`，源码要求的输入指纹见 `src/supported-sources.json`。
+
+离线检查覆盖资源结构、任务分支、布景坐标和镜头投影。实际坐姿、遮挡、镜头衔接与常驻行为仍需实机验收。
+
+## 安装、更新与回退
+
+预构建文件在 `release/payload/Mods/modDualRomanceNoTango`。保存并退出游戏后，在仓库根目录执行：
+
+```powershell
+# 首次安装；替换为自己的游戏路径。
+& .\scripts\Install-DualRomance.ps1 -GamePath 'C:\Games\The Witcher 3' -Action Install
+# 从安装器支持的前版更新。
+& .\scripts\Install-DualRomance.ps1 -GamePath 'C:\Games\The Witcher 3' -Action Update
+# 仅核对安装文件。
+& .\scripts\Install-DualRomance.ps1 -GamePath 'C:\Games\The Witcher 3' -Action Verify
+```
+
+安装器核对游戏构建和文件哈希，支持的前版记录在 `release/metadata/previous-version.json`；更新前备份到游戏目录下的 `ModBackups/DualRomanceNoTango/时间戳/content`；遇到未知改动会停止。回退时退出游戏，将对应备份的 `content` 目录恢复到 `Mods/modDualRomanceNoTango/content`。`-Action Disable` / `Enable` 可停用或启用模组。
+
+重测酒馆开场需要读取开场之前的存档并重新经过女皇结局转场；已经站在酒馆外的存档不会重播。仓库不包含个人存档。
+
+## 构建与检查
+
+需要 PowerShell 5.1+、Python 3.10+，以及包含 Blood and Wine 的目标游戏。Python 只使用标准库。
+
+```powershell
+# 不需要游戏：检查预构建文件、资源结构、源码指纹与许可证。
+python .\scripts\check_release.py
+# 需要游戏：重建、运行资源检查与配置审计、生成发行 ZIP。
+& .\scripts\Build.ps1 -GamePath 'C:\Games\The Witcher 3'
+# 需要游戏：只重跑资源与逻辑检查。
+& .\scripts\Test.ps1 -GamePath 'C:\Games\The Witcher 3'
+```
+
+构建输出和报告位于 Git 忽略的 `build/`，不安装模组或启动游戏。CI 只核对已有发布文件，不执行实机测试。
+
+## 维护约束
 
 Python 只使用标准库。补丁输入必须匹配 `src/supported-sources.json`；游戏升级后先检查资源格式、任务图和原生坐标，再建立新指纹，不要删除校验来跳过不兼容问题。
 
