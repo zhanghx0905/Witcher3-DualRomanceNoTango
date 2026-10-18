@@ -1,8 +1,0 @@
-{
-  "tests_run": 23,
-  "failures": 0,
-  "errors": 0,
-  "passed": true,
-  "runtime_validated": false,
-  "scope": "Native resource roundtrip, CRC, container/index, branch traversal, scene links and activities"
-}

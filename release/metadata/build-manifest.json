@@ -1,6 +1,6 @@
 {
   "name": "Dual Romance / No Tango",
-  "version": "0.1.4-experimental",
+  "version": "0.1.5-experimental",
   "target": "Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7",
   "runtime_validated": false,
   "resources": [
@@ -61,18 +61,18 @@
     {
       "path": "quests\\epilogues\\q504_ciri_empress.w2phase",
       "source_sha256": "4392431fdc537d2d2b49df8076843f03b28861f36990df8c03ec978c88819182",
-      "patched_sha256": "75376827aea254c79acf0deeecbc5a8eb1e45c1019b44b2aeb74a357a0b78c53",
+      "patched_sha256": "1f8320b4e134a50b35ad4269a8506e2af856a843e06d8e68dccc429d705a490b",
       "source_bytes": 106594,
-      "patched_bytes": 107253,
+      "patched_bytes": 107691,
       "source_objects": 643,
-      "patched_objects": 648
+      "patched_objects": 652
     },
     {
       "path": "quests\\main_npcs\\community_files\\triss.w2comm",
       "source_sha256": "fd6392e5252a0a826fad9bedc5d3cf50dca7f8c9e880cda663e1e68dd7814c90",
-      "patched_sha256": "56c2a1c4c39a997f52acca5ddf23717c6c1eb9aac9ac6e97104cea4cf1cc7eeb",
+      "patched_sha256": "d64d1b1d176f330f0afa09e88fe3967cdee06b7786bb3441688cdacecb26227c",
       "source_bytes": 39970,
-      "patched_bytes": 39995,
+      "patched_bytes": 40245,
       "source_objects": 24,
       "patched_objects": 24
     },
@@ -111,6 +111,24 @@
       "patched_bytes": 8094,
       "source_objects": 3,
       "patched_objects": 7
+    },
+    {
+      "path": "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\actionpoints\\in_tavern.w2l",
+      "source_sha256": "fb88c7b84f2af5f926cae8e48df3f75fa3f5cb6fdc5d8d51f4e4c6022681ed70",
+      "patched_sha256": "57cb979beb1fb8711a402bf541752b02bd38ac7cdeae2a75620608bcc67d9f13",
+      "source_bytes": 6992,
+      "patched_bytes": 7401,
+      "source_objects": 28,
+      "patched_objects": 32
+    },
+    {
+      "path": "quests\\epilogues\\quest_files\\q504_ciri_empress\\scenes\\q504_01_ciri_start.w2scene",
+      "source_sha256": "c3f5def2181bf857b5f4eb85f9eabc196cf45bc02e431c3064b27bbac6096129",
+      "patched_sha256": "9785b657020f3e6386b4fa7f20c6012d3ec18b512f4d180d477b7dde5e59e2a1",
+      "source_bytes": 148100,
+      "patched_bytes": 187652,
+      "source_objects": 362,
+      "patched_objects": 482
     }
   ],
   "changes": [
@@ -123,19 +141,29 @@
     "House: start both independent dialogue cycles once; Triss uses her own chair/trigger and a native-segment route to the guest bed.",
     "Triss home community: original lounge AP for visit and residency; guest bedroom at night; no Ciri-tree AP substitution.",
     "Stock Blood and Wine reload fix also restores the garden chair for dual romance.",
-    "Ciri empress tavern: spawn both; retain Yen dialogue input, Triss uses a separate existing seat.",
-    "Triss main community: q504 companion uses a different existing tavern seat.",
+    "Ciri empress tavern: dual-only community/input/dialogue branch seats both companions at Geralt table; original single-romance branches retained.",
+    "Q504 Triss community: added a dual-only phase/timetable; original single-romance phase remains unchanged.",
     "Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.",
     "Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.",
     "Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.",
-    "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched."
+    "Triss furniture: independent native lounge mesh, side table, jug and serving plate as streamed entities; original sector/furniture untouched.",
+    "Q504 dual romance: independent Triss actionpoint at the existing third stool of Geralt/Yen table; native furniture and other actionpoints untouched.",
+    "Q504 opening: dual-only input/dialogset with Geralt, Yen and Triss at the same table; native Yen lines retained; one dedicated three-person overview replaces the two-person shot. Single-romance inputs/timelines remain native."
   ],
   "support_resources": [
     {
       "path": "dlc\\bob\\data\\quests\\minor_quests\\quest_files\\mq7024_home\\entities\\mq7024_witcher_bed_rich_collision.w2ent",
       "sha256": "cfe23cf8a4c09ac95f62d85f67d418899d0548f840b382cf51a2d371a3c93325"
+    },
+    {
+      "path": "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\dialogsets\\tavern.w2l",
+      "sha256": "6d931ffade0db853436f83eea9829e9ea2f67cd6d87b0b6e22b1df31c9e22d50"
+    },
+    {
+      "path": "levels\\prolog_village_winter\\village\\tavern\\decorations_ns.w2l",
+      "sha256": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
     }
   ],
-  "bundle_sha256": "fc4019255c21562a67b6335887a929e4b1532370e2f5b3fee9dc71711d668e86",
-  "metadata_sha256": "e32c85cced494b6afa6251a85a07ba72e1c301b0431cadeaeacde9bd6eb1cc21"
+  "bundle_sha256": "23b4b489facf1c62e4b699ed0e485f7b554ec34f3658d21064d9758b412afba4",
+  "metadata_sha256": "0cfb07686c50d1d7d103d390ff2f7e54f45a790231ac8929d1c4e95913273d51"
 }

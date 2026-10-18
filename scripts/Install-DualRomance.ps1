@@ -53,13 +53,24 @@ function Assert-ContainedModPath([string]$Path) {
     }
 }
 
+function Get-Sha256([string]$Path) {
+    $stream = [System.IO.File]::OpenRead($Path)
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        return [System.BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    } finally {
+        $algorithm.Dispose()
+        $stream.Dispose()
+    }
+}
+
 function Assert-ContentHashes([string]$Directory) {
     $bundle = Join-Path $Directory 'content\blob0.bundle'
     $metadata = Join-Path $Directory 'content\metadata.store'
-    if ((Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash -ne $manifest.bundle_sha256) {
+    if ((Get-Sha256 $bundle) -ne $manifest.bundle_sha256) {
         throw "Bundle hash mismatch: $bundle"
     }
-    if ((Get-FileHash -LiteralPath $metadata -Algorithm SHA256).Hash -ne $manifest.metadata_sha256) {
+    if ((Get-Sha256 $metadata) -ne $manifest.metadata_sha256) {
         throw "Metadata hash mismatch: $metadata"
     }
 }
@@ -92,8 +103,8 @@ switch ($Action) {
         if (-not (Test-Path -LiteralPath $activeDirectory)) { throw 'Active mod was not found. Use -Action Install for a new installation.' }
         if (Test-Path -LiteralPath $disabledDirectory) { throw 'A disabled copy also exists; resolve the duplicate before updating.' }
         $previous = Get-Content -LiteralPath (Join-Path $manifestDirectory 'previous-version.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-        $installedBundle = (Get-FileHash -LiteralPath (Join-Path $activeDirectory 'content\blob0.bundle') -Algorithm SHA256).Hash
-        $installedMetadata = (Get-FileHash -LiteralPath (Join-Path $activeDirectory 'content\metadata.store') -Algorithm SHA256).Hash
+        $installedBundle = (Get-Sha256 (Join-Path $activeDirectory 'content\blob0.bundle'))
+        $installedMetadata = (Get-Sha256 (Join-Path $activeDirectory 'content\metadata.store'))
         if ($installedBundle -eq $manifest.bundle_sha256 -and $installedMetadata -eq $manifest.metadata_sha256) {
             Write-Output 'This update is already installed.'
             break
@@ -104,7 +115,7 @@ switch ($Action) {
         $backupRoot = Join-Path $gameDirectory 'ModBackups\DualRomanceNoTango'
         $backupDirectory = [System.IO.Path]::GetFullPath((Join-Path $backupRoot (Get-Date -Format 'yyyyMMdd-HHmmss-fff')))
         if ((Split-Path -Parent $backupDirectory) -ne [System.IO.Path]::GetFullPath($backupRoot)) { throw 'Unexpected backup path.' }
-        if ($PSCmdlet.ShouldProcess($activeDirectory, 'Back up version 0.1.3 and install version 0.1.4')) {
+        if ($PSCmdlet.ShouldProcess($activeDirectory, 'Back up version 0.1.4 and install version 0.1.5')) {
             New-Item -ItemType Directory -Path $backupDirectory | Out-Null
             Copy-Item -LiteralPath (Join-Path $activeDirectory 'content') -Destination $backupDirectory -Recurse
             try {
@@ -118,7 +129,7 @@ switch ($Action) {
                 }
                 throw
             }
-            Write-Output 'Updated to 0.1.4-experimental. Restart the game, load a post-welcome save, travel to another map and back to Corvo Bianco, then test Triss at her own chair.'
+            Write-Output 'Updated to 0.1.5-experimental. Restart the game and load a save before the empress tavern opening to check the shared table and three-person camera.'
             Write-Output "Previous version backup: $backupDirectory"
         }
     }
@@ -131,7 +142,7 @@ switch ($Action) {
             Copy-Item -LiteralPath $packageDirectory -Destination $modsDirectory -Recurse
             Assert-ContentHashes $activeDirectory
             Write-Output "Installed: $activeDirectory"
-            Write-Output 'Use a manual save from before the lodge conversation. In-game testing is still required.'
+            Write-Output 'Use a save before the scene being tested. In-game testing is still required.'
         }
     }
     'Disable' {
@@ -166,10 +177,10 @@ switch ($Action) {
             Write-Output 'This mod is not installed.'
         }
         if ($verificationDirectory) {
-            $actualBundle = (Get-FileHash -LiteralPath (Join-Path $verificationDirectory 'content\blob0.bundle') -Algorithm SHA256).Hash
-            $actualMetadata = (Get-FileHash -LiteralPath (Join-Path $verificationDirectory 'content\metadata.store') -Algorithm SHA256).Hash
+            $actualBundle = (Get-Sha256 (Join-Path $verificationDirectory 'content\blob0.bundle'))
+            $actualMetadata = (Get-Sha256 (Join-Path $verificationDirectory 'content\metadata.store'))
             if ($actualBundle -eq $manifest.bundle_sha256 -and $actualMetadata -eq $manifest.metadata_sha256) {
-                Write-Output 'Installed content hashes: OK (0.1.4-experimental)'
+                Write-Output 'Installed content hashes: OK (0.1.5-experimental)'
             } else {
                 $previous = Get-Content -LiteralPath (Join-Path $manifestDirectory 'previous-version.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                 if ($actualBundle -ne $previous.bundle_sha256 -or $actualMetadata -ne $previous.metadata_sha256) {

@@ -13,6 +13,8 @@ from redio import BundleCatalog, Metadata, Resource, read_ws_string, u32, ws_str
 from manor_layout import (AP_LAYER, ANCHOR_LAYER, BED_TEMPLATE, DECO_LAYER, TRIGGER_LAYER,
                           TRISS_PATH, TRISS_TRIGGER, patch_actionpoints, patch_anchors,
                           patch_decor, patch_triggers)
+from tavern_layout import (TAVERN_AP, TAVERN_SCENE, TAVERN_ANCHOR, TAVERN_STOOLS, DUAL_PHASE, DUAL_INPUT,
+                           patch_tavern_actionpoint, patch_tavern_scene, patch_triss_dual_phase)
 
 MOD_NAME = 'modDualRomanceNoTango'
 Q310 = r'quests\part_3\q310_pregeels_new.w2phase'
@@ -24,7 +26,7 @@ BOB_FIX = r'dlc\bob\data\quests\bob_bugfix_phase.w2phase'
 Q504 = r'quests\epilogues\q504_ciri_empress.w2phase'
 TRISS_MAIN = r'quests\main_npcs\community_files\triss.w2comm'
 PATHS = [Q310, LODGE, BOARDS, HOUSE, TRISS_HOME, BOB_FIX, Q504, TRISS_MAIN,
-         AP_LAYER, ANCHOR_LAYER, TRIGGER_LAYER, DECO_LAYER]
+         AP_LAYER, ANCHOR_LAYER, TRIGGER_LAYER, DECO_LAYER, TAVERN_AP, TAVERN_SCENE]
 
 
 def integer(resource, obj, name):
@@ -200,23 +202,28 @@ def patch_q504(r, notes):
     check_triss = clone_block(r, 579, 'q504-check-second-companion', 551)
     stop_triss = clone_block(r, 581, 'q504-stop-triss-default', 551)
     spawn_triss = clone_block(r, 582, 'q504-spawn-second-companion', 551)
+    spawn_yen_dual = clone_block(r, 574, 'q504-spawn-yen-dual', 551)
+    wait_yen_dual = clone_block(r, 575, 'q504-wait-yen-dual', 551)
+    r.set_name(sole_owned(r, spawn_triss, 'CActivateStoryPhase'), 'phase', DUAL_PHASE)
     r.route(559, 'True', [(572, 'In')])
     r.route(573, 'Out', [(check_triss, 'In')])
     r.route(check_triss, 'True', [(stop_triss, 'In')])
     r.route(check_triss, 'False', [(574, 'In')])
     r.route(stop_triss, 'Out', [(spawn_triss, 'In')])
-    r.route(spawn_triss, 'Out', [(574, 'In')])
-    notes.append('Ciri empress tavern: spawn both; retain Yen dialogue input, Triss uses a separate existing seat.')
+    r.route(spawn_triss, 'Out', [(spawn_yen_dual, 'In')])
+    r.route(spawn_yen_dual, 'Out', [(wait_yen_dual, 'In')])
+    r.route(wait_yen_dual, '', [(561, DUAL_INPUT)])
+    notes.append('Ciri empress tavern: dual-only community/input/dialogue branch seats both companions at Geralt table; original single-romance branches retained.')
 
 
 def patch_triss_main(r, notes):
-    replace_cname_in_property(r, 1, 'storyPhaseTimetable', 'q504_ap_sorc_sitting_table', 'q504_ap_sorc_sit', 1)
-    notes.append('Triss main community: q504 companion uses a different existing tavern seat.')
+    patch_triss_dual_phase(r, notes)
 
 
 PATCHERS = dict(zip(PATHS, [patch_q310, patch_lodge, patch_boards, patch_house,
                            patch_triss_home, patch_bob_fix, patch_q504, patch_triss_main,
-                           patch_actionpoints, patch_anchors, patch_triggers, patch_decor]))
+                           patch_actionpoints, patch_anchors, patch_triggers, patch_decor,
+                           patch_tavern_actionpoint, patch_tavern_scene]))
 
 
 def build(game, destination):
@@ -228,8 +235,10 @@ def build(game, destination):
     support_path = Path(__file__).with_name('supported-sources.json')
     supported = json.loads(support_path.read_text(encoding='utf-8')) if support_path.exists() else None
     template_bytes = catalog.extract(BED_TEMPLATE)
+    support_resources = {path: catalog.extract(path) for path in [BED_TEMPLATE, TAVERN_ANCHOR, TAVERN_STOOLS]}
     if supported is not None:
-        assert hashlib.sha256(template_bytes).hexdigest() == supported[BED_TEMPLATE], ('Entity prototype changed; rebase required', BED_TEMPLATE)
+        for path, data in support_resources.items():
+            assert hashlib.sha256(data).hexdigest() == supported[path], ('Support resource changed; rebase required', path)
     resources, originals, notes, manifest = {}, {}, [], []
     for path in PATHS:
         original = catalog.extract(path)
@@ -260,10 +269,10 @@ def build(game, destination):
     for path, raw in resources.items():
         assert packed_catalog.extract(path) == raw
         assert path in packed_metadata.by_path
-    report = dict(name='Dual Romance / No Tango', version='0.1.4-experimental',
+    report = dict(name='Dual Romance / No Tango', version='0.1.5-experimental',
                   target='Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7',
                   runtime_validated=False, resources=manifest, changes=notes,
-                  support_resources=[dict(path=BED_TEMPLATE, sha256=hashlib.sha256(template_bytes).hexdigest())],
+                  support_resources=[dict(path=path, sha256=hashlib.sha256(data).hexdigest()) for path,data in support_resources.items()],
                   bundle_sha256=hashlib.sha256(bundle).hexdigest(),
                   metadata_sha256=hashlib.sha256(index).hexdigest())
     destination.mkdir(parents=True, exist_ok=True)

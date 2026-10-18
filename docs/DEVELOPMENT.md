@@ -1,20 +1,29 @@
 # 开发与版本维护
 
-只从自己的目标游戏安装读取资源。补丁输入必须匹配 `src/supported-sources.json`，不要为了通过构建而直接删除哈希校验。游戏更新后先重新评估资源布局及任务图，再建立新基准。
+Python 只使用标准库。补丁输入必须匹配 `src/supported-sources.json`；游戏升级后先检查资源格式、任务图和原生坐标，再建立新指纹，不要删除校验来跳过不兼容问题。
 
-`src/build.py` 生成 12 个改动后的资源及 bundle/metadata；`src/manor_layout.py` 处理空间布局；`src/verify.py` 执行游戏相关检查；`src/audit_coexistence.py` 检查常驻与对话配置。Python 无外部运行依赖。
+## 代码入口
 
-`scripts/Build.ps1` 按唯一输出目录构建，执行检查后，用 `scripts/package_release.py` 对照本版本基准哈希并打包。构建文件不应替换 `release/payload/`，除非在制作一个已审阅的新版本；基准不一致会报错。
+- `redio.py`：CR2W、bundle、metadata 读取与打包，保留原生格式及校验。
+- `build.py`：14 项资源覆盖与任务分支修改。
+- `manor_layout.py`：庄园独立动作点、家具、触发区和到客房的路径。
+- `tavern_layout.py`：女皇结局双恋爱专用社区阶段、动作点、对话布景和三人全景。
+- `verify.py`：27 项结构与逻辑检查；`audit_coexistence.py`：5 项庄园配置审计。
 
-版本升级时同步 `project.json`、`src/build.py`、兼容性/前版数据、发布说明和验收报告；不要把新版本包装为 0.1.4。二进制为本版本的小型发布内容，已纳入 Git；完整游戏、depot、存档和本地临时文件必须保持在忽略目录中。
+## 酒馆修改约束
 
-## Git 起步
+双恋爱使用 `dr_q504_triss_at_shared_table` 社区阶段和 `dr_dual_lovers` 场景入口。Triss 使用原有第三张凳子，世界坐标约为 `(48.7470, -2.1617, 2.2830)`，朝向 305°。动作点与对话布景分别按各自原生坐姿偏移校准；原有凳子、单恋爱入口与时间表保持原样。
 
-```powershell
-git status
-git add .
-git commit -m 'Prepare 0.1.4 experimental source and release'
-# 用自己的真实仓库地址添加 remote，再推送。
-```
+复制场景时必须同时处理普通属性与缓冲时间线。台词、事件信息和变体可能挂在场景根节点，不能只沿 section 的 parent 复制。事件 GUID、eventInfo、sceneElement、插值引用和 elementID 必须一致重映射，并保留原生语音 ID。
 
-不要把用户名、账号邮箱、Steam 凭据、发布 token 或本地存档写进版本库。
+三人全景的场景局部位置为 `(3.3, 3.1, 1.4)`，pitch -6°、yaw 188°、FOV 50。检查使用 16:9 上半身包围盒投影；实际 FOV 解释、遮挡、坐姿及镜头衔接必须进游戏确认。
+
+## 修改与发布
+
+`Build.ps1` 创建独立输出目录，依次构建、验证、审计和打包，并要求结果与当前预构建文件哈希一致。仅修改文档或工具时不要改动游戏二进制基准。
+
+修改补丁并准备新版本时，同步 `project.json`、`src/build.py` 的版本，以及 `release/metadata/` 的当前清单、兼容性和前版哈希；经审阅后更新 `release/payload/`。版本升级应记录在 CHANGELOG，保持预构建核对与完整构建通过。
+
+生成的报告、ZIP、depot、个人存档与临时研究文件不纳入 Git。提交前运行 `git diff --check` 和与修改相关的检查。保留源代码与发行包的版权声明、LICENSE、NOTICE 和第三方声明。
+
+实机验收应包括双恋爱、单 Triss、单 Yen、无恋爱四种入口，酒馆三人坐姿及镜头、离开演出后的衔接，以及庄园常驻、日夜切换、对话、跨地图与重载。当前版本仍未完成这些场景的全面实机验收。

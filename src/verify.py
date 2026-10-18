@@ -17,6 +17,9 @@ from redio import (BundleCatalog, Metadata, Resource, fnv32_name, read_propertie
 from manor_layout import (AP_LAYER, ANCHOR_LAYER, TRIGGER_LAYER, DECO_LAYER, BED_TEMPLATE,
                           OFFSET, TRISS_PATH, TRISS_TRIGGER, fields, field,
                           inline_array, path_world_points, sector_objects)
+from tavern_layout import (TAVERN_AP, TAVERN_SCENE, DUAL_PHASE, DUAL_AP, DUAL_INPUT,
+                            DUAL_DIALOGSET, DUAL_CAMERA, SHARED_STOOL, YEN_STOOL,
+                            SHARED_YAW, SCENE_YAW, point_to_world, timeline_events)
 
 
 def fact_condition(r, obj, facts):
@@ -255,6 +258,112 @@ class ModChecks(unittest.TestCase):
                 spawned = [obj for obj in path if r.kind(obj) == 'CQuestStoryPhaseSetterBlock']
                 self.assertEqual(len(spawned), int(triss) + int(yen))
                 self.assertEqual(560 in path, not (triss or yen))
+                source = path[-2]
+                socket = next(input_name for _,targets in r.connections(source) for target,input_name in targets if target == 561)
+                expected = DUAL_INPUT if triss and yen else 'triss_lover' if triss else 'yen_lover' if yen else 'no_lover'
+                self.assertEqual(socket, expected)
+                triss_phases=[]
+                for obj in spawned:
+                    for child,chunk in enumerate(r.chunks,1):
+                        if chunk.parent == obj and r.kind(child)=='CActivateStoryPhase':
+                            phase=r.names[int.from_bytes(r.prop(child,'phase').data,'little')]
+                            if 'triss' in phase or phase=='q504_in_tavern':triss_phases.append(phase)
+                if triss and yen:self.assertIn(DUAL_PHASE,triss_phases)
+
+    def test_q504_single_romance_scene_and_timetable_remain_native(self):
+        scene,original=self.resource(TAVERN_SCENE),Resource(self.originals[TAVERN_SCENE])
+        for obj in range(2,len(original.chunks)+1):
+            if obj!=5:self.assertEqual(scene.chunk(obj).data,original.chunk(obj).data)
+        community=self.resource(TRISS_MAIN);old=Resource(self.originals[TRISS_MAIN])
+        before=inline_array(old.prop(1,'storyPhaseTimetable').data)
+        after=inline_array(community.prop(1,'storyPhaseTimetable').data)
+        self.assertEqual(len(after),len(before)+1)
+        for a,b in zip(before,after):self.assertEqual(b'\0'+__import__('redio').encode_properties(a),b'\0'+__import__('redio').encode_properties(b))
+        self.assertEqual(community.names[int.from_bytes(field(community,after[-1],'name').data,'little')],DUAL_PHASE)
+
+    def test_q504_shared_table_actionpoint_and_scene_use_existing_third_stool(self):
+        ap,original=self.resource(TAVERN_AP),Resource(self.originals[TAVERN_AP])
+        for obj in range(2,len(original.chunks)+1):self.assertEqual(ap.chunk(obj).data,original.chunk(obj).data)
+        actor=next(i for i in range(1,len(ap.chunks)+1) if any(ap.names[p.name]=='tags' and p.data==b'\1'+struct.pack('<H',ap.names.index(DUAL_AP)) for p in ap.props(i)))
+        position=struct.unpack_from('<3f',ap.prop(actor,'transform').data,1)
+        self.assertLess(math.dist(position,SHARED_STOOL),.5)
+        component=next(i for i,c in enumerate(ap.chunks,1) if c.parent==actor and ap.kind(i)=='CActionPointComponent')
+        self.assertEqual(ap.prop(component,'jobTreeRes').data,original.prop(16,'jobTreeRes').data)
+        _,end=read_properties(ap.chunk(actor).data,1);tail=ap.chunk(actor).data[end:]
+        count,pos=read_vlq(tail,8);self.assertEqual(count,1);self.assertEqual(struct.unpack_from('<I',tail,pos)[0],component)
+        scene=self.resource(TAVERN_SCENE)
+        dialogset=next(i for i in range(1,len(scene.chunks)+1) if scene.kind(i)=='CStorySceneDialogsetInstance' and scene.names[int.from_bytes(scene.prop(i,'name').data,'little')]==DUAL_DIALOGSET)
+        raw=scene.prop(dialogset,'slots').data
+        slots=struct.unpack_from('<'+'I'*struct.unpack_from('<I',raw)[0],raw,4)
+        positions={}
+        for slot in slots:
+            props={scene.names[p.name]:p for p in scene.props(slot)}
+            if 'actorName' in props:positions[scene.names[int.from_bytes(props['actorName'].data,'little')]]=point_to_world(struct.unpack_from('<3f',props['slotPlacement'].data,1))
+        self.assertTrue({'TRISS','YENNEFER','GERALT'}<=positions.keys())
+        for actor_name in ['GERALT','YENNEFER']:
+            self.assertGreater(math.dist(positions['TRISS'],positions[actor_name]),.65)
+            self.assertLess(math.dist(positions['TRISS'],positions[actor_name]),2.1)
+        self.assertLess(math.dist(positions['TRISS'],SHARED_STOOL),.4)
+
+    def test_q504_cloned_timeline_remaps_event_guids_and_element_references(self):
+        scene=self.resource(TAVERN_SCENE)
+        original=Resource(self.originals[TAVERN_SCENE])
+        section=next(i for i in range(1,len(scene.chunks)+1) if scene.kind(i)=='CStorySceneSection' and read_ws_string(scene.prop(i,'sectionName').data)=='q504_01_morons_dual_romance')
+        events=timeline_events(scene,section)[1]
+        guids={field(scene,props,'GUID').data for _,props in events}
+        old_guids={field(original,props,'GUID').data for _,props in timeline_events(original,120)[1]}
+        self.assertFalse(guids & old_guids)
+        raw=scene.prop(section,'eventsInfo').data
+        ids=struct.unpack_from('<'+'I'*struct.unpack_from('<I',raw)[0],raw,4)
+        elements_raw=scene.prop(section,'sceneElements').data
+        element_ids=set(struct.unpack_from('<'+'I'*struct.unpack_from('<I',elements_raw)[0],elements_raw,4))
+        self.assertEqual(len(ids),len(events))
+        for event_id,(_,props) in zip(ids,events):
+            self.assertEqual(scene.prop(event_id,'eventGuid').data,field(scene,props,'GUID').data)
+            for p in props:
+                key,kind=scene.names[p.name],scene.names[p.kind]
+                if key=='sceneElement':self.assertIn(int.from_bytes(p.data,'little'),element_ids)
+                if key in ['linkParentGUID','interpolationEventGUID'] and p.data!=b'\0'*16:self.assertIn(p.data,guids)
+        old_raw=original.prop(120,'sceneElements').data
+        old_ids=struct.unpack_from('<'+'I'*struct.unpack_from('<I',old_raw)[0],old_raw,4)
+        original_lines=[original.chunk(i).data for i in old_ids if original.kind(i)=='CStorySceneLine']
+        copied_lines=[scene.chunk(i).data for i in sorted(element_ids) if scene.kind(i)=='CStorySceneLine']
+        self.assertGreater(len(original_lines),0)
+        self.assertEqual(len(original_lines),len(copied_lines))
+        for old_raw,new_raw in zip(original_lines,copied_lines):
+            a={original.names[p.name]:p.data for p in read_properties(old_raw,1)[0] if original.names[p.kind]=='LocalizedString'}
+            b={scene.names[p.name]:p.data for p in read_properties(new_raw,1)[0] if scene.names[p.kind]=='LocalizedString'}
+            self.assertEqual(a,b)
+
+    def test_q504_three_person_overview_contains_seated_heads_and_shoulders(self):
+        scene=self.resource(TAVERN_SCENE)
+        camera=next(row for row in inline_array(scene.prop(1,'cameraDefinitions').data) if scene.names[int.from_bytes(field(scene,row,'cameraName').data,'little')]==DUAL_CAMERA)
+        transform=field(scene,camera,'cameraTransform').data
+        position=struct.unpack_from('<3f',transform,1);_,pitch,yaw=struct.unpack_from('<3f',transform,13)
+        pitch,yaw=map(math.radians,[pitch,yaw])
+        forward=(-math.sin(yaw)*math.cos(pitch),math.cos(yaw)*math.cos(pitch),math.sin(pitch))
+        right=(math.cos(yaw),math.sin(yaw),0)
+        up=(right[1]*forward[2],-right[0]*forward[2],right[0]*forward[1]-right[1]*forward[0])
+        tangent=math.tan(math.radians(struct.unpack('<f',field(scene,camera,'cameraFov').data)[0])/2)
+        dialogset=next(i for i in range(1,len(scene.chunks)+1) if scene.kind(i)=='CStorySceneDialogsetInstance' and scene.names[int.from_bytes(scene.prop(i,'name').data,'little')]==DUAL_DIALOGSET)
+        raw=scene.prop(dialogset,'slots').data;slots=struct.unpack_from('<'+'I'*struct.unpack_from('<I',raw)[0],raw,4)
+        checked=[]
+        for slot in slots:
+            props={scene.names[p.name]:p for p in scene.props(slot)}
+            actor_name=scene.names[int.from_bytes(props['actorName'].data,'little')] if 'actorName' in props else ''
+            if actor_name not in ['TRISS','YENNEFER','GERALT']:continue
+            origin=struct.unpack_from('<3f',props['slotPlacement'].data,1)
+            for dx in [-.3,.3]:
+                for dy in [-.15,.15]:
+                    for dz in [.8,1.25]:
+                        delta=[origin[0]+dx-position[0],origin[1]+dy-position[1],origin[2]+dz-position[2]]
+                        depth=sum(a*b for a,b in zip(delta,forward));self.assertGreater(depth,1)
+                        screen_x=sum(a*b for a,b in zip(delta,right))/(depth*tangent)
+                        screen_y=sum(a*b for a,b in zip(delta,up))/(depth*tangent/(16/9))
+                        self.assertLess(abs(screen_x),1.0,actor_name)
+                        self.assertLess(abs(screen_y),1.0,actor_name)
+            checked.append(actor_name)
+        self.assertEqual(set(checked),{'TRISS','YENNEFER','GERALT'})
 
     def test_activity_points_and_movement_paths_separated(self):
         r = self.resource(TRISS_HOME)

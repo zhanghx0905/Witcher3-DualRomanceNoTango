@@ -11,5 +11,9 @@
   "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\dialogsets\\house.w2l": "0ee9b4c841a7078a1e065d2aae5b9182ddee79ec75caa3ef17407a63a967a218",
   "dlc\\bob\\data\\levels\\bob\\quests\\main_quests\\q705_epilog\\geralt_house\\triggers\\house.w2l": "92bdda4d04b97bd51ff0110c828f12ac8c8bd6a4d64189b7972f812d11f27781",
   "dlc\\bob\\data\\levels\\bob\\locations\\vineyards\\east\\corvo_bianco\\q705_epilog\\garden_chair\\deco_exterior.w2l": "fd853f31e8ed7843aebc1aaacf9a72a0c6574dff2c5e32eaf185f1c47e3db5b0",
-  "dlc\\bob\\data\\quests\\minor_quests\\quest_files\\mq7024_home\\entities\\mq7024_witcher_bed_rich_collision.w2ent": "cfe23cf8a4c09ac95f62d85f67d418899d0548f840b382cf51a2d371a3c93325"
+  "dlc\\bob\\data\\quests\\minor_quests\\quest_files\\mq7024_home\\entities\\mq7024_witcher_bed_rich_collision.w2ent": "cfe23cf8a4c09ac95f62d85f67d418899d0548f840b382cf51a2d371a3c93325",
+  "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\actionpoints\\in_tavern.w2l": "fb88c7b84f2af5f926cae8e48df3f75fa3f5cb6fdc5d8d51f4e4c6022681ed70",
+  "quests\\epilogues\\quest_files\\q504_ciri_empress\\scenes\\q504_01_ciri_start.w2scene": "c3f5def2181bf857b5f4eb85f9eabc196cf45bc02e431c3064b27bbac6096129",
+  "levels\\prolog_village_winter\\quests\\q504_ciri_empress\\tavern\\dialogsets\\tavern.w2l": "6d931ffade0db853436f83eea9829e9ea2f67cd6d87b0b6e22b1df31c9e22d50",
+  "levels\\prolog_village_winter\\village\\tavern\\decorations_ns.w2l": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
 }
