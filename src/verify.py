@@ -741,8 +741,11 @@ class ModChecks(unittest.TestCase):
         self.assertEqual(r.kind(10),'CQuestDeletionMarkerBlock')
         guid = old.prop(10,'guid').data
         marker_guids=r.prop(10,'guids').data
-        self.assertEqual(struct.unpack_from('<I',marker_guids)[0],2)
-        self.assertIn(guid,[marker_guids[4:20],marker_guids[20:36]])
+        self.assertEqual(struct.unpack_from('<I',marker_guids)[0],3)
+        actual_guids=[marker_guids[pos:pos+16] for pos in range(4,len(marker_guids),16)]
+        import uuid
+        expected_guids=[guid]+[uuid.uuid5(uuid.NAMESPACE_URL,'dualromance/manor-layout-v'+str(version)+'-migration-stub/'+guid.hex()).bytes_le for version in [1,2]]
+        self.assertEqual(actual_guids,expected_guids)
         self.assertFalse(any(p.data==guid for i in range(1,len(r.chunks)+1) for p in r.props(i)
                              if r.names[p.name]=='guid'))
         targets = r.connections(10)[0][1]
@@ -750,7 +753,7 @@ class ModChecks(unittest.TestCase):
         stub = next(obj for obj,_ in targets if r.kind(obj)=='CQuestPauseConditionBlock')
         self.assertEqual(read_ws_string(r.prop(stub,'name').data),read_ws_string(old.prop(10,'name').data))
         entered = next(obj for obj,_ in targets if r.kind(obj)=='CQuestFactsDBChangingBlock')
-        self.assertEqual(read_ws_string(r.prop(entered,'factID').data),'dr_manor_layout_split_v2')
+        self.assertEqual(read_ws_string(r.prop(entered,'factID').data),'dr_manor_layout_split_v3')
         phase = r.connections(entered)[0][1][0][0]
         self.assertEqual(r.kind(phase),'CQuestPhaseBlock')
         graph = integer(r,phase,'embeddedGraph')
@@ -778,13 +781,16 @@ class ModChecks(unittest.TestCase):
                     shown=[obj for obj in path if any(r.names[p.name]=='layersToShow' and DUAL_GROUP.encode() in p.data for p in r.props(obj))]
                     self.assertEqual(bool(shown),bool(triss and yen and triss_met and yen_met))
 
-    def test_welcomes_keep_native_layers_and_spawn_phases_until_the_offscreen_residency_transition(self):
+    def test_welcome_scenes_keep_native_layers_and_spawn_phases_until_both_finish(self):
         r,old=self.resource(HOUSE),Resource(self.originals[HOUSE])
         self.assertEqual(r.connections(199),[('Out',[(200,'Input')])])
         self.assertEqual(r.prop(199,'layersToShow').data,old.prop(199,'layersToShow').data)
         self.assertEqual(r.prop(199,'layersToHide').data,struct.pack('<I',1)+__import__('redio').ws_string(DUAL_GROUP))
         for triss,yen in [(True,True),(True,False),(False,True)]:
-            path=walk_quest(r,214,romance(triss,yen),{5})
+            facts=romance(triss,yen)
+            path=walk_quest(r,214,facts,{244,252})
+            if triss and yen:
+                path+=walk_quest(r,244,facts,{252})
             actions=[i for block in path for i,c in enumerate(r.chunks,1)
                      if c.parent==block and r.kind(i)=='CActivateStoryPhase']
             self.assertEqual(len(actions),int(triss)+int(yen))
@@ -797,6 +803,31 @@ class ModChecks(unittest.TestCase):
         spawn=next(obj for obj in path if r.kind(obj)=='CQuestStoryPhaseSetterBlock')
         self.assertLess(path.index(wait),path.index(layout))
         self.assertLess(path.index(layout),path.index(spawn))
+
+    def test_post_welcome_restores_both_companions_and_furniture_before_any_distance_wait(self):
+        r=self.resource(HOUSE)
+        for triss,yen in [(True,True),(True,False),(False,True),(False,False)]:
+            with self.subTest(triss=triss,yen=yen):
+                path=walk_quest(r,252,romance(triss,yen),{5})
+                actions=[i for block in path for i,c in enumerate(r.chunks,1)
+                         if c.parent==block and r.kind(i)=='CActivateStoryPhase']
+                self.assertEqual(len(actions),2 if triss and yen else 0)
+                self.assertEqual([r.names[integer(r,i,'phase')] for i in actions],
+                                 [DUAL_PHASES['q705_house']]*len(actions))
+                self.assertEqual(path.count(5),1)
+                self.assertFalse(any(r.kind(obj)=='CQuestPauseConditionBlock' for obj in path))
+                layouts=[obj for obj in path if any(r.names[p.name]=='layersToShow' and DUAL_GROUP.encode() in p.data for p in r.props(obj))]
+                self.assertEqual(len(layouts),int(triss and yen))
+                if triss and yen:
+                    block=r.chunk(actions[0]).parent
+                    self.assertLess(path.index(layouts[0]),path.index(block))
+                    self.assertEqual(r.prop(layouts[0],'syncOperation').data,b'\1')
+                    self.assertIn(NATIVE_DECO_GROUP.encode(),r.prop(layouts[0],'layersToHide').data)
+                    for index,action in enumerate(actions):
+                        imp=integer(r,action,'spawnset')-1
+                        offset,kind,flags=struct.unpack_from('<IHH',r.table_data[2],imp*8)
+                        depot=r.table_data[0][offset:r.table_data[0].index(b'\0',offset)].decode()
+                        self.assertEqual(depot,[TRISS_HOME,YEN_HOME][index])
 
     def test_derived_layers_have_distinct_guids_and_consistent_path_hashes(self):
         metadata = Metadata((self.output/'Mods/modDualRomanceNoTango/content/metadata.store').read_bytes())

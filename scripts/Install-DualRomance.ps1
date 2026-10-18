@@ -115,7 +115,7 @@ switch ($Action) {
         $backupRoot = Join-Path $gameDirectory 'ModBackups\DualRomanceNoTango'
         $backupDirectory = [System.IO.Path]::GetFullPath((Join-Path $backupRoot (Get-Date -Format 'yyyyMMdd-HHmmss-fff')))
         if ((Split-Path -Parent $backupDirectory) -ne [System.IO.Path]::GetFullPath($backupRoot)) { throw 'Unexpected backup path.' }
-        if ($PSCmdlet.ShouldProcess($activeDirectory, 'Back up version 0.1.6 and install version 0.1.7')) {
+        if ($PSCmdlet.ShouldProcess($activeDirectory, 'Back up version 0.1.7 and install version 0.1.8')) {
             New-Item -ItemType Directory -Path $backupDirectory | Out-Null
             Copy-Item -LiteralPath (Join-Path $activeDirectory 'content') -Destination $backupDirectory -Recurse
             try {
@@ -129,7 +129,7 @@ switch ($Action) {
                 }
                 throw
             }
-            Write-Output 'Updated to 0.1.7-experimental. Restart the game, travel to another map and return to Corvo Bianco to reload the romance-specific manor layout.'
+            Write-Output 'Updated to 0.1.8-experimental. Restart the game, travel to another map and return to Corvo Bianco to reload the romance-specific manor layout.'
             Write-Output "Previous version backup: $backupDirectory"
         }
     }
@@ -180,7 +180,7 @@ switch ($Action) {
             $actualBundle = (Get-Sha256 (Join-Path $verificationDirectory 'content\blob0.bundle'))
             $actualMetadata = (Get-Sha256 (Join-Path $verificationDirectory 'content\metadata.store'))
             if ($actualBundle -eq $manifest.bundle_sha256 -and $actualMetadata -eq $manifest.metadata_sha256) {
-                Write-Output 'Installed content hashes: OK (0.1.7-experimental)'
+                Write-Output 'Installed content hashes: OK (0.1.8-experimental)'
             } else {
                 $previous = Get-Content -LiteralPath (Join-Path $manifestDirectory 'previous-version.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                 if ($actualBundle -ne $previous.bundle_sha256 -or $actualMetadata -ne $previous.metadata_sha256) {

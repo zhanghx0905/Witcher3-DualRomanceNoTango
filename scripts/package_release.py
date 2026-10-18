@@ -18,7 +18,7 @@ def package(stage):
     validation=json.loads((stage/'validation.json').read_text(encoding='utf-8'))
     audit=json.loads((stage/'coexistence-audit.json').read_text(encoding='utf-8'))
     assert actual['version']==project['version']==reference['version']
-    assert validation['passed'] and validation['tests_run']==37
+    assert validation['passed'] and validation['tests_run']==38
     assert all(row['passed'] for row in audit['checks']) and len(audit['checks'])==5
     for key in ['bundle_sha256','metadata_sha256']:assert actual[key]==reference[key],f'Non-reproducible {project["version"]}: {key}'
     for name in ['compatibility.json','previous-version.json']:
@@ -43,9 +43,9 @@ def package(stage):
 
 更新庄园布景后请重新启动游戏，跨地图后返回庄园，让图层和活动安排重新加载。重测酒馆演出需要读取开场前的存档。
 
-37 项离线检查和 5 项庄园配置审计通过。用户实测确认双恋爱欢迎正常读取，后续日常流程正常。两段欢迎使用原版图层和生成阶段，双人布局推迟到欢迎后的常驻阶段启用。
+38 项离线检查和 5 项庄园配置审计通过。上一测试版的双恋爱欢迎读取与后续日常流程已获用户实测确认。本版在第二段欢迎结束后立即加载双人布局、恢复两位伴侣的休息阶段，昼夜日常仍等待原来的离场条件。
 
-已知问题：欢迎结束后、日常流程触发前，后出场的特莉丝会顶替叶奈法，此时不会显示两个躺椅。该过渡阶段尚未修正。其他分支、旧档迁移和全部镜头仍需分别验收；validation.json 和 coexistence-audit.json 只记录离线检查结果。
+用户实机复测后已接受本版对欢迎后叶奈法缺席、第二套躺椅未出现问题的修正。旧档迁移接续前两版修复入口；其他分支、迁移和全部镜头仍需分别验收。validation.json 和 coexistence-audit.json 只记录离线检查结果。
 
 src 内包含可重建源码，只需 Python 3.10+ 标准库和目标游戏：
 

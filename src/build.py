@@ -142,8 +142,8 @@ def patch_house(r, notes):
     remove_yen = clone_block(r, 137, 'house-intro-remove-yen', 2)
     wait_yen = clone_block(r, 138, 'house-intro-wait-yen-despawn', 2)
     # Visits require the retail scene anchors and start-in-AP spawn phases.
-    # Keep both introductions on that path; load the alternate layout only at
-    # the offscreen transition into residency, after both visits have finished.
+    # Keep both introductions on that path. Only after the second scene has
+    # returned may the shared staging be replaced by separate resting places.
     r.route(215, 'True', [(241, 'In')])
     r.route(244, 'Output', [(check_triss, 'In')])
     r.route(check_triss, 'True', [(remove_yen, 'In')])
@@ -180,10 +180,17 @@ def patch_house(r, notes):
         r.set_name(obj,'triggerTag',YEN_TRIGGER)
     set_property(r,199,'layersToHide','array:2,0,String',strings([DUAL_GROUP]))
     set_property(r,199,'syncOperation','Bool',b'\1')
+    # Do not leave Yen absent until the later 60 m residency trigger. Both
+    # actors use the dual visit/rest timetable in this interim stage; their
+    # normal day/night schedules still start through the existing branch.
+    dual,_ = add_layout_switch(r,2,252,'Output',[(5,'Success')],214,215,9,'house-after-welcomes-layout')
+    resting = add_phase_setter(r,2,[(TRISS_HOME,DUAL_PHASES['q705_house']),
+        (YEN_HOME,DUAL_PHASES['q705_house'])],'house-after-welcomes-resting',[(5,'Success')])
+    r.route(dual,'Out',[(resting,'In')])
     notes.append('House: Yen intro then Triss intro; shared scene space is serialized; dual residents spawn together.')
     notes.append('House hotfix: Yen deactivation uses a hard-loaded community import, separate from the soft spawn reference.')
     notes.append('House residency hotfix: after leaving Triss behind, activate Yen directly; do not wait for distance to a despawned actor.')
-    notes.append('House: both welcomes use retail layers and spawn phases; switch dual-only AP/anchor/trigger/furniture layers at the offscreen residency transition.')
+    notes.append('House: both welcomes use retail layers and spawn phases; after Triss scene output, load dual furniture and restore both resting companions immediately. The native offscreen gate still starts daily residency later.')
 
 
 def patch_triss_home(r, notes):
@@ -307,7 +314,7 @@ def build(game, destination):
     for path, raw in resources.items():
         assert packed_catalog.extract(path) == raw
         assert path in packed_metadata.by_path
-    report = dict(name='Dual Romance / No Tango', version='0.1.7-experimental',
+    report = dict(name='Dual Romance / No Tango', version='0.1.8-experimental',
                   target='Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7',
                   runtime_validated=False, resources=manifest, changes=notes,
                   support_resources=[dict(path=path, sha256=hashlib.sha256(data).hexdigest()) for path,data in support_resources.items()],

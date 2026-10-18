@@ -1,6 +1,6 @@
 {
   "name": "Dual Romance / No Tango",
-  "version": "0.1.7-experimental",
+  "version": "0.1.8-experimental",
   "target": "Local Steam Remastered resources, CR2W 164 / bundle 5 / metadata 7",
   "runtime_validated": false,
   "resources": [
@@ -38,11 +38,11 @@
       "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase",
       "source_path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\phases\\q705_house.w2phase",
       "source_sha256": "725a2535fd0813604df9b5e0542eb1ab8b8256a264a8b11d696dcab5977692c3",
-      "patched_sha256": "94eadcd3d461543efd35704166b225b6ccbf9ab39de2b18d456787255d9eb8b9",
+      "patched_sha256": "61b989b06a2cd037499986f6cc3f2476f2098d731dfe544031b702cbcf505043",
       "source_bytes": 52687,
-      "patched_bytes": 55636,
+      "patched_bytes": 57337,
       "source_objects": 359,
-      "patched_objects": 378
+      "patched_objects": 387
     },
     {
       "path": "dlc\\bob\\data\\quests\\main_quests\\quest_files\\q705_epilog\\spawnsets\\q705_triss.w2comm",
@@ -58,9 +58,9 @@
       "path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
       "source_path": "dlc\\bob\\data\\quests\\bob_bugfix_phase.w2phase",
       "source_sha256": "cf9b7e4cc2d7af948027c6414e3496a7b843564925b1f63d714105b573f23aaf",
-      "patched_sha256": "ebc1d918a228fd4bccbda613e02a1156352f26817da727d32b72c0da1c21340f",
+      "patched_sha256": "3d95fe93465da2711d16b966002d423d3c1e38210a4018405efc0614e17711bc",
       "source_bytes": 89495,
-      "patched_bytes": 102022,
+      "patched_bytes": 102038,
       "source_objects": 645,
       "patched_objects": 728
     },
@@ -192,8 +192,8 @@
     "House: Yen intro then Triss intro; shared scene space is serialized; dual residents spawn together.",
     "House hotfix: Yen deactivation uses a hard-loaded community import, separate from the soft spawn reference.",
     "House residency hotfix: after leaving Triss behind, activate Yen directly; do not wait for distance to a despawned actor.",
-    "House: both welcomes use retail layers and spawn phases; switch dual-only AP/anchor/trigger/furniture layers at the offscreen residency transition.",
-    "Manor triss: native visit and single-romance phases retained; dual residency selects the dual layout. Legacy dual visit phase remains available for saved states.",
+    "House: both welcomes use retail layers and spawn phases; after Triss scene output, load dual furniture and restore both resting companions immediately. The native offscreen gate still starts daily residency later.",
+    "Manor triss: native welcomes and single-romance phases retained; dual post-welcome resting and daily phases select the dual layout.",
     "Existing-save migration: native terminal-pause deletion marker starts a fresh gated manor fix, including already-completed q705 saves.",
     "Manor reload: choose dual/native layers and community phases from both romance facts; retain native single-romance furniture selection.",
     "Ciri empress tavern: dual-only community/input/dialogue branch seats both companions at Geralt table; original single-romance branches retained.",
@@ -203,7 +203,7 @@
     "Q504 dual romance: independent Triss actionpoint at the existing third stool of Geralt/Yen table; native furniture and other actionpoints untouched.",
     "Q504 opening: dual-only input/dialogset with Geralt, Yen and Triss at the same table; native Yen lines retained; one dedicated three-person overview replaces the two-person shot. Single-romance inputs/timelines remain native.",
     "Manor: hidden dual-only world layer group; native spatial/furniture layers remain retail for single romances.",
-    "Manor yen: native visit and single-romance phases retained; dual residency selects the dual layout. Legacy dual visit phase remains available for saved states.",
+    "Manor yen: native welcomes and single-romance phases retained; dual post-welcome resting and daily phases select the dual layout.",
     "Triss: native chair actionpoint and staging moved together; separate route joins native outdoor path to the guest-room staircase.",
     "Triss repeat dialogue: independent world anchor; original voices, choices, cameras, poses and animation events unchanged.",
     "Triss dialogue availability: independent translated trigger, including cached world polygon and bounds; Yen trigger unchanged.",
@@ -223,6 +223,6 @@
       "sha256": "ff62d059d9508e1ce0bc299429844b6186e7dcc6278edb0eeb1e6274d715fc5c"
     }
   ],
-  "bundle_sha256": "e7ca110d43fcce70d64090a559c8d54bb23c5e38279a844b449917046f13b475",
-  "metadata_sha256": "50d89adf550b8ea37cc75403b4c2b4d896502e202f1413445e055d9a6c1766f7"
+  "bundle_sha256": "0fcde2b397b12119859f6c9ecf32d5bcc8cb41e44889478aef34eb49bf00e5ef",
+  "metadata_sha256": "4f701d03ddaf2886c76a4c6a285ae3f004146dd749cecc177d24e3e7e835f244"
 }
